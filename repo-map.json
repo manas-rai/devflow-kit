@@ -1,0 +1,21 @@
+{
+  "version": "1",
+  "routes": [
+    {
+      "jira_project": "MYPROJ",
+      "component": "backend",
+      "github_repo": "your-org/backend-api",
+      "default_branch": "main"
+    },
+    {
+      "jira_project": "MYPROJ",
+      "component": "frontend",
+      "github_repo": "your-org/web-app",
+      "default_branch": "main"
+    }
+  ],
+  "defaults": {
+    "github_repo": "your-org/backend-api",
+    "default_branch": "main"
+  }
+}
