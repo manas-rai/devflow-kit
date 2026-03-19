@@ -4,12 +4,12 @@
     {
       "jira_project": "CWH",
       "component": "frontend/backend",
-      "github_repo": "manas-rai/spec-to-pr-orchestrator",
+      "github_repo": "manas-rai/cloud-waste-hunter",
       "default_branch": "main"
     }
   ],
   "defaults": {
-    "github_repo": "manas-rai/spec-to-pr-orchestrator",
+    "github_repo": "manas-rai/cloud-waste-hunter",
     "default_branch": "main"
   }
 }
