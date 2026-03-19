@@ -34,7 +34,7 @@ class SyncAgent:
     """
 
     def __init__(self) -> None:
-        self.pat = os.environ["GITHUB_PAT"]
+        self.pat = os.environ["GH_PAT"]
         self.jira_base_url = os.environ["JIRA_BASE_URL"].rstrip("/")
         self.jira_auth = (os.environ["JIRA_USER_EMAIL"], os.environ["JIRA_API_TOKEN"])
         self.gh_headers = {
