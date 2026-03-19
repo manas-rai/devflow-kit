@@ -182,9 +182,9 @@ class AgentRunner:
         if verbose:
             cmd.append("--verbose")
 
-        print(f"Invoking: {' '.join(cmd[:4])}... ({len(prompt)} chars)")
-        print("MCP servers loaded from .claude/settings.json")
-        print(f"Full command: {' '.join(cmd)}")
+        print(f"Invoking: {' '.join(cmd[:4])}... ({len(prompt)} chars)", file=sys.stderr, flush=True)
+        print("MCP servers loaded from .claude/settings.json", file=sys.stderr, flush=True)
+        print(f"Full command: {' '.join(cmd)}", file=sys.stderr, flush=True)
 
         try:
             result = subprocess.run(
@@ -195,37 +195,37 @@ class AgentRunner:
                 timeout=1800,  # 30 minute hard timeout
             )
         except FileNotFoundError:
-            print("ERROR: 'claude' CLI not found. Is it installed?", file=sys.stderr)
+            print("ERROR: 'claude' CLI not found. Is it installed?", file=sys.stderr, flush=True)
             return "ERROR: claude CLI not found"
         except subprocess.TimeoutExpired:
-            print("ERROR: Claude CLI timed out after 30 minutes", file=sys.stderr)
+            print("ERROR: Claude CLI timed out after 30 minutes", file=sys.stderr, flush=True)
             return "ERROR: claude CLI timed out"
 
-        print(f"\n{'='*60}")
-        print(f"Claude CLI exit code: {result.returncode}")
-        print(f"Stdout length: {len(result.stdout)} chars")
-        print(f"Stderr length: {len(result.stderr)} chars")
-        print(f"{'='*60}")
+        print(f"\n{'='*60}", file=sys.stderr, flush=True)
+        print(f"Claude CLI exit code: {result.returncode}", file=sys.stderr, flush=True)
+        print(f"Stdout length: {len(result.stdout)} chars", file=sys.stderr, flush=True)
+        print(f"Stderr length: {len(result.stderr)} chars", file=sys.stderr, flush=True)
+        print(f"{'='*60}", file=sys.stderr, flush=True)
 
         # Print stdout so it appears in CI logs
         if result.stdout:
             preview = result.stdout[:3000]
-            print(f"\n--- CLAUDE STDOUT (first 3000 chars) ---")
-            print(preview)
+            print(f"\n--- CLAUDE STDOUT (first 3000 chars) ---", file=sys.stderr, flush=True)
+            print(preview, file=sys.stderr, flush=True)
             if len(result.stdout) > 3000:
-                print(f"... ({len(result.stdout) - 3000} more chars truncated)")
-            print(f"--- END STDOUT ---\n")
+                print(f"... ({len(result.stdout) - 3000} more chars truncated)", file=sys.stderr, flush=True)
+            print(f"--- END STDOUT ---\n", file=sys.stderr, flush=True)
         else:
-            print("WARNING: Claude produced NO stdout output", file=sys.stderr)
+            print("WARNING: Claude produced NO stdout output", file=sys.stderr, flush=True)
 
-        # Print stderr
+        # Print stderr from Claude
         if result.stderr:
-            print(f"\n--- CLAUDE STDERR ---", file=sys.stderr)
-            print(result.stderr[:2000], file=sys.stderr)
-            print(f"--- END STDERR ---\n", file=sys.stderr)
+            print(f"\n--- CLAUDE STDERR ---", file=sys.stderr, flush=True)
+            print(result.stderr[:2000], file=sys.stderr, flush=True)
+            print(f"--- END STDERR ---\n", file=sys.stderr, flush=True)
 
         if result.returncode != 0:
-            print(f"ERROR: Claude CLI failed with exit code {result.returncode}", file=sys.stderr)
+            print(f"ERROR: Claude CLI failed with exit code {result.returncode}", file=sys.stderr, flush=True)
 
         # Combine stdout and stderr for the full execution log
         full_log = result.stdout
