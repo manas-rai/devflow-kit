@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevFlow Kit — AI Agents That Turn Jira Tickets into Pull Requests</title>
+    <meta name="description" content="Fork once, connect to Jira, and AI agents refine specs, decompose tickets, and create PRs automatically. Zero infrastructure in target repos.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav id="navbar">
+        <div class="nav-container">
+            <a href="#" class="nav-logo">
+                <span class="logo-icon">⚡</span>
+                <span class="logo-text">DevFlow Kit</span>
+            </a>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#how-it-works">How It Works</a>
+                <a href="#architecture">Architecture</a>
+                <a href="#setup">Setup</a>
+                <a href="https://github.com/manas-rai/devflow-kit" class="nav-cta" target="_blank" rel="noopener">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    GitHub
+                </a>
+            </div>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="hero">
+        <div class="hero-bg">
+            <div class="grid-overlay"></div>
+            <div class="glow glow-1"></div>
+            <div class="glow glow-2"></div>
+            <div class="glow glow-3"></div>
+        </div>
+        <div class="hero-container">
+            <div class="hero-badge" data-animate="fade-up">
+                <span class="badge-dot"></span>
+                Open Source • Zero Infrastructure
+            </div>
+            <h1 data-animate="fade-up" data-delay="100">
+                Jira Tickets → Pull Requests<br>
+                <span class="gradient-text">Fully Automated</span>
+            </h1>
+            <p class="hero-subtitle" data-animate="fade-up" data-delay="200">
+                AI agents that refine specs, decompose complex tickets, and create
+                implementation-ready PRs. Fork once, connect Jira, and watch the magic.
+            </p>
+            <div class="hero-actions" data-animate="fade-up" data-delay="300">
+                <a href="#setup" class="btn btn-primary">
+                    <span>Get Started</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </a>
+                <a href="https://github.com/manas-rai/devflow-kit" class="btn btn-secondary" target="_blank" rel="noopener">
+                    View on GitHub
+                </a>
+            </div>
+            <div class="hero-flow" data-animate="fade-up" data-delay="400">
+                <div class="flow-card">
+                    <div class="flow-icon jira">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 11.513H0a5.218 5.218 0 005.232 5.215h2.13v2.057A5.215 5.215 0 0012.575 24V12.518a1.005 1.005 0 00-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 005.215 5.214h2.129v2.058a5.218 5.218 0 005.215 5.214V6.758a1.001 1.001 0 00-1.001-1.001zM23 .262H11.429a5.218 5.218 0 005.215 5.215h2.129v2.057A5.215 5.215 0 0023.988 12.749V1.267A1.005 1.005 0 0022.988.262z"/></svg>
+                    </div>
+                    <span>Jira Ticket</span>
+                </div>
+                <div class="flow-arrow">
+                    <div class="arrow-line"></div>
+                    <div class="arrow-pulse"></div>
+                </div>
+                <div class="flow-card active">
+                    <div class="flow-icon agent">⚡</div>
+                    <span>AI Agent</span>
+                </div>
+                <div class="flow-arrow">
+                    <div class="arrow-line"></div>
+                    <div class="arrow-pulse"></div>
+                </div>
+                <div class="flow-card">
+                    <div class="flow-icon github">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    </div>
+                    <span>Pull Request</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features">
+        <div class="section-container">
+            <div class="section-header" data-animate="fade-up">
+                <span class="section-tag">Features</span>
+                <h2>Everything you need,<br><span class="gradient-text">nothing you don't</span></h2>
+                <p>One repo. One setup. Target repos stay completely untouched.</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card" data-animate="fade-up" data-delay="0">
+                    <div class="feature-icon">🧠</div>
+                    <h3>Smart Refinement</h3>
+                    <p>The agent reads your codebase, understands the ticket, and decides the optimal approach — pass-through, refine, or decompose.</p>
+                </div>
+                <div class="feature-card" data-animate="fade-up" data-delay="100">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Parallel Execution</h3>
+                    <p>Complex tickets split into independent subtasks that run simultaneously. Multiple Claude instances create PRs in parallel.</p>
+                </div>
+                <div class="feature-card" data-animate="fade-up" data-delay="200">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Guardrails</h3>
+                    <p>Built-in validators ensure quality — issues are always created, Jira stays updated, subtask counts are controlled, errors are caught.</p>
+                </div>
+                <div class="feature-card" data-animate="fade-up" data-delay="300">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Auto-Sync</h3>
+                    <p>The Sync Agent polls every 15 minutes. PR opened → Jira updates. PR merged → ticket is Done. All subtasks done → parent is Done.</p>
+                </div>
+                <div class="feature-card" data-animate="fade-up" data-delay="400">
+                    <div class="feature-icon">🗺️</div>
+                    <h3>Multi-Repo Routing</h3>
+                    <p>Map Jira components to different GitHub repos with a single JSON config. Add new repos in seconds — no secrets, no workflows.</p>
+                </div>
+                <div class="feature-card" data-animate="fade-up" data-delay="500">
+                    <div class="feature-icon">🏗️</div>
+                    <h3>Zero Infrastructure</h3>
+                    <p>No servers, no databases, no Docker. Just GitHub Actions and a JSON config. Target repos need nothing installed.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works">
+        <div class="section-container">
+            <div class="section-header" data-animate="fade-up">
+                <span class="section-tag">How It Works</span>
+                <h2>From ticket to PR<br><span class="gradient-text">in minutes, not days</span></h2>
+            </div>
+            <div class="timeline">
+                <div class="timeline-item" data-animate="fade-up" data-delay="0">
+                    <div class="timeline-number">01</div>
+                    <div class="timeline-content">
+                        <div class="timeline-icon">📋</div>
+                        <h3>Ticket Transitions</h3>
+                        <p>Move a Jira ticket to "To Refine". Jira Automation fires a webhook to your DevFlow Kit repo.</p>
+                    </div>
+                </div>
+                <div class="timeline-item" data-animate="fade-up" data-delay="100">
+                    <div class="timeline-number">02</div>
+                    <div class="timeline-content">
+                        <div class="timeline-icon">🔍</div>
+                        <h3>Agent Analyzes</h3>
+                        <p>The Refinement Agent reads your codebase — CLAUDE.md, README, the file tree — and deeply understands the request.</p>
+                    </div>
+                </div>
+                <div class="timeline-item" data-animate="fade-up" data-delay="200">
+                    <div class="timeline-number">03</div>
+                    <div class="timeline-content">
+                        <div class="timeline-icon">🧩</div>
+                        <h3>Smart Decision</h3>
+                        <p>Simple bug? Straight to implementation. Multi-concern feature? Decomposed into parallel subtasks with non-overlapping file scopes.</p>
+                    </div>
+                </div>
+                <div class="timeline-item" data-animate="fade-up" data-delay="300">
+                    <div class="timeline-number">04</div>
+                    <div class="timeline-content">
+                        <div class="timeline-icon">🚀</div>
+                        <h3>Issues Created</h3>
+                        <p>GitHub issues are created with @claude tags. Each issue has a full technical spec, scope constraints, and acceptance criteria.</p>
+                    </div>
+                </div>
+                <div class="timeline-item" data-animate="fade-up" data-delay="400">
+                    <div class="timeline-number">05</div>
+                    <div class="timeline-content">
+                        <div class="timeline-icon">🤖</div>
+                        <h3>Claude Implements</h3>
+                        <p>Claude Code picks up each issue, reads the codebase, implements the changes, and opens a pull request — all fully automated.</p>
+                    </div>
+                </div>
+                <div class="timeline-item" data-animate="fade-up" data-delay="500">
+                    <div class="timeline-number">06</div>
+                    <div class="timeline-content">
+                        <div class="timeline-icon">✅</div>
+                        <h3>Jira Auto-Syncs</h3>
+                        <p>PRs opened → In Review. PRs merged → Done. All subtasks complete → parent ticket transitions to Done.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section id="architecture">
+        <div class="section-container">
+            <div class="section-header" data-animate="fade-up">
+                <span class="section-tag">Architecture</span>
+                <h2>A hub that<br><span class="gradient-text">powers everything</span></h2>
+                <p>One repo orchestrates it all. Target repos stay untouched.</p>
+            </div>
+            <div class="arch-diagram" data-animate="fade-up" data-delay="100">
+                <div class="arch-layer">
+                    <div class="arch-label">Trigger</div>
+                    <div class="arch-boxes">
+                        <div class="arch-box trigger">
+                            <span class="arch-box-icon">📋</span>
+                            <span>Jira Automation</span>
+                            <span class="arch-box-sub">Webhook on status change</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="arch-connector">
+                    <svg width="2" height="40"><line x1="1" y1="0" x2="1" y2="40" stroke="url(#connector-gradient)" stroke-width="2" stroke-dasharray="4 4"/></svg>
+                </div>
+                <div class="arch-layer">
+                    <div class="arch-label">Hub</div>
+                    <div class="arch-boxes">
+                        <div class="arch-box hub">
+                            <span class="arch-box-icon">⚡</span>
+                            <span>DevFlow Kit</span>
+                            <span class="arch-box-sub">GitHub Actions • Python • MCP</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="arch-connector">
+                    <svg width="2" height="40"><line x1="1" y1="0" x2="1" y2="40" stroke="url(#connector-gradient)" stroke-width="2" stroke-dasharray="4 4"/></svg>
+                </div>
+                <div class="arch-layer">
+                    <div class="arch-label">Agents</div>
+                    <div class="arch-boxes">
+                        <div class="arch-box agent-box">
+                            <span class="arch-box-icon">🧠</span>
+                            <span>Refinement Agent</span>
+                            <span class="arch-box-sub">Claude Code CLI • 30 turns</span>
+                        </div>
+                        <div class="arch-box agent-box">
+                            <span class="arch-box-icon">🔄</span>
+                            <span>Sync Agent</span>
+                            <span class="arch-box-sub">Polls every 15 min</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="arch-connector">
+                    <svg width="2" height="40"><line x1="1" y1="0" x2="1" y2="40" stroke="url(#connector-gradient)" stroke-width="2" stroke-dasharray="4 4"/></svg>
+                </div>
+                <div class="arch-layer">
+                    <div class="arch-label">Integrations</div>
+                    <div class="arch-boxes">
+                        <div class="arch-box integration">
+                            <span class="arch-box-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                            </span>
+                            <span>GitHub MCP</span>
+                            <span class="arch-box-sub">Issues • PRs • Code</span>
+                        </div>
+                        <div class="arch-box integration">
+                            <span class="arch-box-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 11.513H0a5.218 5.218 0 005.232 5.215h2.13v2.057A5.215 5.215 0 0012.575 24V12.518a1.005 1.005 0 00-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 005.215 5.214h2.129v2.058a5.218 5.218 0 005.215 5.214V6.758a1.001 1.001 0 00-1.001-1.001zM23 .262H11.429a5.218 5.218 0 005.215 5.215h2.129v2.057A5.215 5.215 0 0023.988 12.749V1.267A1.005 1.005 0 0022.988.262z"/></svg>
+                            </span>
+                            <span>Jira MCP</span>
+                            <span class="arch-box-sub">Comments • Transitions</span>
+                        </div>
+                        <div class="arch-box integration">
+                            <span class="arch-box-icon">🤖</span>
+                            <span>Claude Code App</span>
+                            <span class="arch-box-sub">Implements code</span>
+                        </div>
+                    </div>
+                </div>
+                <svg width="0" height="0"><defs><linearGradient id="connector-gradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)"/><stop offset="100%" stop-color="var(--accent-alt)"/></linearGradient></defs></svg>
+            </div>
+        </div>
+    </section>
+
+    <!-- Decision Matrix Section -->
+    <section id="decisions">
+        <div class="section-container">
+            <div class="section-header" data-animate="fade-up">
+                <span class="section-tag">Intelligence</span>
+                <h2>Smart decisions,<br><span class="gradient-text">not blind automation</span></h2>
+            </div>
+            <div class="decision-table-wrapper" data-animate="fade-up" data-delay="100">
+                <table class="decision-table">
+                    <thead>
+                        <tr>
+                            <th>Ticket Type</th>
+                            <th>Decision</th>
+                            <th>What Happens</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge badge-green">Small bug fix</span></td>
+                            <td>Direct</td>
+                            <td>Creates 1 GitHub issue with @claude, minimal spec</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-blue">Clear feature</span></td>
+                            <td>Refine</td>
+                            <td>Writes a full technical spec, creates 1 issue with @claude</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-purple">Multi-concern feature</span></td>
+                            <td>Decompose</td>
+                            <td>Breaks into N subtasks, creates N issues, parallel execution</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-orange">Large refactor</span></td>
+                            <td>Refine</td>
+                            <td>Keeps as 1 issue — atomic changes shouldn't be split</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Setup Section -->
+    <section id="setup">
+        <div class="section-container">
+            <div class="section-header" data-animate="fade-up">
+                <span class="section-tag">Quick Start</span>
+                <h2>Up and running<br><span class="gradient-text">in 15 minutes</span></h2>
+            </div>
+            <div class="setup-steps">
+                <div class="setup-step" data-animate="fade-up" data-delay="0">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Use This Template</h3>
+                        <p>Click "Use this template" on GitHub to create your own copy.</p>
+                        <div class="code-block">
+                            <code>git clone https://github.com/your-org/devflow-kit.git</code>
+                        </div>
+                    </div>
+                </div>
+                <div class="setup-step" data-animate="fade-up" data-delay="100">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Configure Secrets</h3>
+                        <p>Add 5 secrets to your repo — Claude token, GitHub PAT, and Jira credentials.</p>
+                        <div class="code-block">
+                            <code>make setup-secrets</code>
+                        </div>
+                    </div>
+                </div>
+                <div class="setup-step" data-animate="fade-up" data-delay="200">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Map Your Repos</h3>
+                        <p>Edit <code>repo-map.json</code> to route Jira projects to GitHub repos.</p>
+                        <div class="code-block">
+<pre><code>{
+  "routes": [{
+    "jira_project": "MYPROJ",
+    "component": "backend",
+    "github_repo": "your-org/api"
+  }]
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="setup-step" data-animate="fade-up" data-delay="300">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Connect Jira</h3>
+                        <p>Create one Automation rule in Jira that sends a webhook on ticket transition.</p>
+                        <div class="code-block">
+                            <code>make setup-jira</code>
+                        </div>
+                    </div>
+                </div>
+                <div class="setup-step" data-animate="fade-up" data-delay="400">
+                    <div class="step-number">5</div>
+                    <div class="step-content">
+                        <h3>Watch the Magic ✨</h3>
+                        <p>Move a Jira ticket to "To Refine" and watch it flow through to a pull request.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tech Stack Section -->
+    <section id="tech">
+        <div class="section-container">
+            <div class="tech-grid" data-animate="fade-up">
+                <div class="tech-item">
+                    <div class="tech-logo">🐍</div>
+                    <span>Python 3.12+</span>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-logo">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    </div>
+                    <span>GitHub Actions</span>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-logo">🤖</div>
+                    <span>Claude Code</span>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-logo">🔌</div>
+                    <span>MCP Protocol</span>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-logo">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 11.513H0a5.218 5.218 0 005.232 5.215h2.13v2.057A5.215 5.215 0 0012.575 24V12.518a1.005 1.005 0 00-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 005.215 5.214h2.129v2.058a5.218 5.218 0 005.215 5.214V6.758a1.001 1.001 0 00-1.001-1.001zM23 .262H11.429a5.218 5.218 0 005.215 5.215h2.129v2.057A5.215 5.215 0 0023.988 12.749V1.267A1.005 1.005 0 0022.988.262z"/></svg>
+                    </div>
+                    <span>Jira Cloud</span>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-logo">📦</div>
+                    <span>httpx + pydantic</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section id="cta">
+        <div class="section-container">
+            <div class="cta-card" data-animate="fade-up">
+                <div class="cta-glow"></div>
+                <h2>Ready to automate your workflow?</h2>
+                <p>Fork DevFlow Kit and start turning Jira tickets into pull requests today.</p>
+                <div class="cta-actions">
+                    <a href="https://github.com/manas-rai/devflow-kit" class="btn btn-primary btn-lg" target="_blank" rel="noopener">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                        Use This Template
+                    </a>
+                    <a href="https://github.com/manas-rai/devflow-kit/blob/main/README.md" class="btn btn-secondary btn-lg" target="_blank" rel="noopener">
+                        Read the Docs
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="footer">
+        <div class="footer-container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="logo-icon">⚡</span>
+                    <span class="logo-text">DevFlow Kit</span>
+                </div>
+                <p class="footer-tagline">AI agents that turn Jira tickets into pull requests.</p>
+            </div>
+            <div class="footer-links">
+                <a href="https://github.com/manas-rai/devflow-kit" target="_blank" rel="noopener">GitHub</a>
+                <a href="https://github.com/manas-rai/devflow-kit/blob/main/README.md" target="_blank" rel="noopener">Docs</a>
+                <a href="https://github.com/manas-rai/devflow-kit/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
+                <a href="https://github.com/manas-rai/devflow-kit/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+            </div>
+            <div class="footer-bottom">
+                <p>Built by <a href="https://github.com/manas-rai" target="_blank" rel="noopener">Manas Rai</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
