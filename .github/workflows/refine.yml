@@ -21,6 +21,33 @@ jobs:
           pip install httpx pydantic
           npm install -g @anthropic-ai/claude-code
 
+      - name: Debug - Verify setup
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          echo "=== Claude CLI version ==="
+          claude --version || echo "CLAUDE CLI NOT FOUND"
+          echo ""
+          echo "=== MCP config ==="
+          cat .claude/settings.json
+          echo ""
+          echo "=== Resolve repo ==="
+          python tools/resolve_repo.py --project "${{ github.event.client_payload.project_key }}" --component "${{ github.event.client_payload.component }}"
+          echo ""
+          echo "=== Env check ==="
+          echo "GH_PAT set: $([ -n \"$GH_PAT\" ] && echo YES || echo NO)"
+          echo "JIRA_BASE_URL set: $([ -n \"$JIRA_BASE_URL\" ] && echo YES || echo NO)"
+          echo "JIRA_USER_EMAIL set: $([ -n \"$JIRA_USER_EMAIL\" ] && echo YES || echo NO)"
+          echo "JIRA_API_TOKEN set: $([ -n \"$JIRA_API_TOKEN\" ] && echo YES || echo NO)"
+          echo "CLAUDE_CODE_OAUTH_TOKEN set: $([ -n \"$CLAUDE_CODE_OAUTH_TOKEN\" ] && echo YES || echo NO)"
+          echo ""
+          echo "=== Quick Claude test ==="
+          echo "Say hello in one word" | claude -p --max-turns 1 2>&1 | head -20 || echo "CLAUDE FAILED"
+
       - name: Run refinement agent
         env:
           ISSUE_KEY: ${{ github.event.client_payload.issue_key }}
