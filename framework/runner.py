@@ -178,7 +178,7 @@ class AgentRunner:
         MCP servers are auto-loaded from .claude/settings.json
         in the working directory.
         """
-        cmd = [self.claude_command, "-p", "--max-turns", str(max_turns)]
+        cmd = [self.claude_command, "-p", "--output-format", "stream-json", "--max-turns", str(max_turns)]
         if verbose:
             cmd.append("--verbose")
 
@@ -187,50 +187,61 @@ class AgentRunner:
         print(f"Full command: {' '.join(cmd)}", file=sys.stderr, flush=True)
 
         try:
-            result = subprocess.run(
+            # Use Popen to stream output in real-time while also capturing it
+            proc = subprocess.Popen(
                 cmd,
-                input=prompt,
-                capture_output=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=1800,  # 30 minute hard timeout
             )
+
+            # Send prompt and close stdin
+            stdout_data, stderr_data = proc.communicate(
+                input=prompt, timeout=1800
+            )
+
         except FileNotFoundError:
             print("ERROR: 'claude' CLI not found. Is it installed?", file=sys.stderr, flush=True)
             return "ERROR: claude CLI not found"
         except subprocess.TimeoutExpired:
+            proc.kill()
             print("ERROR: Claude CLI timed out after 30 minutes", file=sys.stderr, flush=True)
             return "ERROR: claude CLI timed out"
 
         print(f"\n{'='*60}", file=sys.stderr, flush=True)
-        print(f"Claude CLI exit code: {result.returncode}", file=sys.stderr, flush=True)
-        print(f"Stdout length: {len(result.stdout)} chars", file=sys.stderr, flush=True)
-        print(f"Stderr length: {len(result.stderr)} chars", file=sys.stderr, flush=True)
+        print(f"Claude CLI exit code: {proc.returncode}", file=sys.stderr, flush=True)
+        print(f"Stdout length: {len(stdout_data)} chars", file=sys.stderr, flush=True)
+        print(f"Stderr length: {len(stderr_data)} chars", file=sys.stderr, flush=True)
         print(f"{'='*60}", file=sys.stderr, flush=True)
 
-        # Print stdout so it appears in CI logs
-        if result.stdout:
-            preview = result.stdout[:3000]
-            print(f"\n--- CLAUDE STDOUT (first 3000 chars) ---", file=sys.stderr, flush=True)
-            print(preview, file=sys.stderr, flush=True)
-            if len(result.stdout) > 3000:
-                print(f"... ({len(result.stdout) - 3000} more chars truncated)", file=sys.stderr, flush=True)
+        # Print FULL stdout (Claude's response) so it appears in CI logs
+        if stdout_data:
+            print(f"\n--- CLAUDE STDOUT (full) ---", file=sys.stderr, flush=True)
+            print(stdout_data[:5000], file=sys.stderr, flush=True)
+            if len(stdout_data) > 5000:
+                print(f"... ({len(stdout_data) - 5000} more chars truncated)", file=sys.stderr, flush=True)
             print(f"--- END STDOUT ---\n", file=sys.stderr, flush=True)
         else:
             print("WARNING: Claude produced NO stdout output", file=sys.stderr, flush=True)
 
-        # Print stderr from Claude
-        if result.stderr:
-            print(f"\n--- CLAUDE STDERR ---", file=sys.stderr, flush=True)
-            print(result.stderr[:2000], file=sys.stderr, flush=True)
+        # Print stderr (often contains MCP/tool errors and verbose output)
+        if stderr_data:
+            print(f"\n--- CLAUDE STDERR (full) ---", file=sys.stderr, flush=True)
+            print(stderr_data[:5000], file=sys.stderr, flush=True)
+            if len(stderr_data) > 5000:
+                print(f"... ({len(stderr_data) - 5000} more chars truncated)", file=sys.stderr, flush=True)
             print(f"--- END STDERR ---\n", file=sys.stderr, flush=True)
+        else:
+            print("NOTE: Claude produced no stderr output", file=sys.stderr, flush=True)
 
-        if result.returncode != 0:
-            print(f"ERROR: Claude CLI failed with exit code {result.returncode}", file=sys.stderr, flush=True)
+        if proc.returncode != 0:
+            print(f"ERROR: Claude CLI failed with exit code {proc.returncode}", file=sys.stderr, flush=True)
 
         # Combine stdout and stderr for the full execution log
-        full_log = result.stdout
-        if result.stderr:
-            full_log += f"\n--- STDERR ---\n{result.stderr}"
+        full_log = stdout_data
+        if stderr_data:
+            full_log += f"\n--- STDERR ---\n{stderr_data}"
 
         return full_log
 
