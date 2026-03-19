@@ -184,19 +184,48 @@ class AgentRunner:
 
         print(f"Invoking: {' '.join(cmd[:4])}... ({len(prompt)} chars)")
         print("MCP servers loaded from .claude/settings.json")
+        print(f"Full command: {' '.join(cmd)}")
 
-        result = subprocess.run(
-            cmd,
-            input=prompt,
-            capture_output=True,
-            text=True,
-            timeout=1800,  # 30 minute hard timeout
-        )
+        try:
+            result = subprocess.run(
+                cmd,
+                input=prompt,
+                capture_output=True,
+                text=True,
+                timeout=1800,  # 30 minute hard timeout
+            )
+        except FileNotFoundError:
+            print("ERROR: 'claude' CLI not found. Is it installed?", file=sys.stderr)
+            return "ERROR: claude CLI not found"
+        except subprocess.TimeoutExpired:
+            print("ERROR: Claude CLI timed out after 30 minutes", file=sys.stderr)
+            return "ERROR: claude CLI timed out"
+
+        print(f"\n{'='*60}")
+        print(f"Claude CLI exit code: {result.returncode}")
+        print(f"Stdout length: {len(result.stdout)} chars")
+        print(f"Stderr length: {len(result.stderr)} chars")
+        print(f"{'='*60}")
+
+        # Print stdout so it appears in CI logs
+        if result.stdout:
+            preview = result.stdout[:3000]
+            print(f"\n--- CLAUDE STDOUT (first 3000 chars) ---")
+            print(preview)
+            if len(result.stdout) > 3000:
+                print(f"... ({len(result.stdout) - 3000} more chars truncated)")
+            print(f"--- END STDOUT ---\n")
+        else:
+            print("WARNING: Claude produced NO stdout output", file=sys.stderr)
+
+        # Print stderr
+        if result.stderr:
+            print(f"\n--- CLAUDE STDERR ---", file=sys.stderr)
+            print(result.stderr[:2000], file=sys.stderr)
+            print(f"--- END STDERR ---\n", file=sys.stderr)
 
         if result.returncode != 0:
-            error_output = result.stderr[:500] if result.stderr else "No stderr"
-            print(f"Claude CLI exit code: {result.returncode}", file=sys.stderr)
-            print(f"Stderr: {error_output}", file=sys.stderr)
+            print(f"ERROR: Claude CLI failed with exit code {result.returncode}", file=sys.stderr)
 
         # Combine stdout and stderr for the full execution log
         full_log = result.stdout
