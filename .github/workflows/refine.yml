@@ -1,0 +1,36 @@
+name: Refinement Agent
+
+on:
+  repository_dispatch:
+    types: [devflow-refine]
+
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout hub repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install httpx pydantic
+          npm install -g @anthropic-ai/claude-code
+
+      - name: Run refinement agent
+        env:
+          ISSUE_KEY: ${{ github.event.client_payload.issue_key }}
+          PROJECT_KEY: ${{ github.event.client_payload.project_key }}
+          COMPONENT: ${{ github.event.client_payload.component }}
+          SUMMARY: ${{ github.event.client_payload.summary }}
+          DESCRIPTION: ${{ github.event.client_payload.description }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: python run_agent.py refinement
