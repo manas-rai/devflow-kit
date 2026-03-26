@@ -79,7 +79,8 @@ class TestRefinementAgent:
     def test_has_required_guardrails(self):
         agent = RefinementAgent()
         guardrail_names = [g.name for g in agent.guardrails]
-        assert "must_create_github_issue" in guardrail_names
+        # Refinement no longer creates GitHub issues
+        assert "must_create_github_issue" not in guardrail_names
         assert "must_update_jira" in guardrail_names
 
     def test_max_turns_is_reasonable(self):
@@ -122,13 +123,13 @@ class TestImplementationAgent:
     def test_has_required_guardrails(self):
         agent = ImplementationAgent()
         guardrail_names = [g.name for g in agent.guardrails]
-        assert "must_create_pull_request" in guardrail_names
+        assert "must_create_github_issue" in guardrail_names
         assert "must_update_jira" in guardrail_names
 
-    def test_max_turns_is_higher(self):
-        """Implementation needs more turns than refinement."""
+    def test_max_turns_is_reasonable(self):
+        """Implementation bridge doesn't need too many turns."""
         agent = ImplementationAgent()
-        assert agent.max_turns >= 40
+        assert agent.max_turns <= 30
 
     def test_prompt_loads(self):
         agent = ImplementationAgent()

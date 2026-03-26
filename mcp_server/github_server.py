@@ -7,7 +7,8 @@ Resources:
 
 Tools:
     create_technical_issue  — Create GitHub issue with technical spec
-    update_technical_issue  — Update existing issue (re-refinement)
+    update_technical_issue  — Update existing issue
+    post_github_comment    — Comment on an issue (e.g. @claude trigger)
     create_branch           — Create branch in target repo
     create_pull_request     — Create PR for changes
     search_code             — Search code in target repo
@@ -95,27 +96,20 @@ async def create_technical_issue(
     repo: str,
     title: str,
     body: str,
-    jira_key: str,
+    jira_key: str = "",
 ) -> str:
-    """Create a GitHub issue with a technical spec for Claude to implement.
+    """Create a GitHub issue with a technical spec.
 
     Args:
         owner: GitHub repo owner (e.g. "manas-rai")
         repo: GitHub repo name (e.g. "cloud-waste-hunter")
         title: Issue title — should include Jira key like "[CWH-38] Add detection"
         body: Full technical spec in markdown (files to change, approach, AC)
-        jira_key: Linked Jira ticket key for cross-reference
+        jira_key: Linked Jira ticket key for cross-reference (optional)
     """
-    from jira_client import JiraClient
-
-    jira_client = JiraClient()
-
-    # Append Jira link and @claude trigger
     full_body = body
     if jira_key:
-        full_body += f"\n\n---\n🔗 Jira: {jira_client.base_url}/browse/{jira_key}"
-        full_body += "\n\n@claude implement this following the spec above."
-        full_body += f" Commit messages must be prefixed with {jira_key}."
+        full_body += f"\n\n---\n🔗 Jira: {jira_key}"
 
     issue = await github.create_issue(
         owner=owner,
@@ -135,13 +129,13 @@ async def update_technical_issue(
     body: str,
     title: str | None = None,
 ) -> str:
-    """Update an existing GitHub issue spec (used during re-refinement).
+    """Update an existing GitHub issue.
 
     Args:
         owner: GitHub repo owner
         repo: GitHub repo name
         issue_number: Issue number to update
-        body: Updated technical spec body
+        body: Updated body
         title: Updated title (optional)
     """
     issue = await github.update_issue(
@@ -152,6 +146,32 @@ async def update_technical_issue(
         body=body,
     )
     return f"✅ Updated issue #{issue.number}: {issue.url}"
+
+
+@mcp.tool()
+async def post_github_comment(
+    owner: str,
+    repo: str,
+    issue_number: int,
+    comment: str,
+) -> str:
+    """Post a comment on a GitHub issue.
+
+    Use this to trigger Claude Code via @claude or to add context.
+
+    Args:
+        owner: GitHub repo owner
+        repo: GitHub repo name
+        issue_number: Issue number to comment on
+        comment: Comment body text
+    """
+    result = await github.comment_on_issue(
+        owner=owner,
+        name=repo,
+        number=issue_number,
+        body=comment,
+    )
+    return f"✅ Posted comment on #{issue_number}: {result['url']}"
 
 
 @mcp.tool()

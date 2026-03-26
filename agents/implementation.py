@@ -1,8 +1,11 @@
-"""ImplementationAgent — creates branches and PRs from GitHub issue specs.
+"""ImplementationAgent — creates GitHub issues and triggers Claude Code.
 
 Triggered when a PM approves a refined ticket by moving it to "Ready for Dev".
-Reads the technical spec from the GitHub issue, creates a branch, implements
-changes, and raises a PR.
+Reads the technical spec from the Jira description, creates a GitHub issue
+in the target repo, and triggers Claude Code via @claude comment.
+
+This agent does NOT implement code itself — Claude Code GitHub App handles
+actual implementation (branch, code, PR).
 """
 
 from __future__ import annotations
@@ -14,7 +17,7 @@ import httpx
 
 from framework.base_agent import AgentContext, BaseAgent
 from framework.guardrail import (
-    MustCreatePullRequest,
+    MustCreateGitHubIssue,
     MustUpdateJira,
     NoErrorsInOutput,
 )
@@ -28,12 +31,12 @@ class ImplementationAgent(BaseAgent):
     tools = [resolve_repo]
 
     guardrails = [
-        MustCreatePullRequest(),
-        MustUpdateJira(),
+        MustCreateGitHubIssue(),  # Must create the GitHub issue
+        MustUpdateJira(),          # Must post Jira comment with issue link
         NoErrorsInOutput(),
     ]
 
-    max_turns = 50  # Implementation needs more turns
+    max_turns = 20  # Lightweight bridge, doesn't need many turns
     retry_count = 1
 
     async def on_start(self, context: AgentContext) -> None:

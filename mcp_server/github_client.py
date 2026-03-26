@@ -2,7 +2,7 @@
 
 Provides typed methods for all GitHub operations needed by DevFlow Kit:
 - Reading repo structure, files, issues
-- Creating issues, branches, PRs
+- Creating/commenting on issues, branches, PRs
 - Searching code
 """
 
@@ -179,6 +179,25 @@ class GitHubClient:
             labels=[l["name"] for l in data.get("labels", [])],
             url=data.get("html_url", ""),
         )
+
+    async def comment_on_issue(
+        self, owner: str, name: str, number: int, body: str
+    ) -> dict:
+        """Post a comment on a GitHub issue."""
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{API_BASE}/repos/{owner}/{name}/issues/{number}/comments",
+                headers=self._headers,
+                json={"body": body},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+        return {
+            "id": data["id"],
+            "url": data.get("html_url", ""),
+            "body": data.get("body", ""),
+        }
 
     async def update_issue(
         self,
