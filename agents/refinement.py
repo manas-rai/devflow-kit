@@ -1,8 +1,12 @@
-"""RefinementAgent — analyzes Jira tickets and creates technical GitHub issues.
+"""RefinementAgent — analyzes Jira tickets and writes technical specs.
 
 This agent reads a business-focused Jira ticket, analyzes the target
-codebase, and creates a detailed technical GitHub issue for implementation.
-It also supports re-refinement when the PM provides feedback.
+codebase, and writes a technical specification directly into the Jira
+ticket's description field. It supports iterative re-refinement when
+the PM provides feedback.
+
+The spec stays in Jira only — no GitHub issue is created during refinement.
+GitHub issues are created later by the implementation agent after PM approval.
 
 This file is purely declarative — it defines WHAT the agent is:
   - Which prompt to use
@@ -23,7 +27,6 @@ import httpx
 from framework.base_agent import AgentContext, BaseAgent
 from framework.guardrail import (
     MaxSubtasks,
-    MustCreateGitHubIssue,
     MustUpdateJira,
     NoErrorsInOutput,
 )
@@ -34,12 +37,11 @@ class RefinementAgent(BaseAgent):
     name = "refinement"
     prompt_template = "prompts/refine.md"
 
-    # Bash tools only — Jira and GitHub are handled by the devflow MCP server
+    # Bash tools only — Jira and GitHub are handled by MCP servers
     tools = [resolve_repo]
 
     guardrails = [
-        MustCreateGitHubIssue(),
-        MustUpdateJira(),
+        MustUpdateJira(),     # Must update Jira description with spec
         MaxSubtasks(5),
         NoErrorsInOutput(),
     ]
