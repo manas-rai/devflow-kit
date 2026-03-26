@@ -86,9 +86,10 @@ class MustCreateGitHubIssue(Guardrail):
     def check(self, execution_log: str, context: dict) -> GuardrailResult:
         # Check for MCP tool call or legacy bash script
         indicators = [
-            "mcp__github__create_issue",
+            "mcp__devflow-github__create_technical_issue",
+            "mcp__devflow__create_technical_issue",
+            "create_technical_issue",
             "create_issue",
-            "tools/create_github_issue.py",
             "issues/",  # GitHub issue URL in output
         ]
         if any(ind in execution_log for ind in indicators):
@@ -115,10 +116,10 @@ class MustUpdateJira(Guardrail):
 
     def check(self, execution_log: str, context: dict) -> GuardrailResult:
         indicators = [
-            "mcp__jira__add_comment",
-            "mcp__jira__create_comment",
+            "mcp__devflow-jira__post_jira_comment",
+            "mcp__devflow__post_jira_comment",
+            "post_jira_comment",
             "add_comment",
-            "tools/post_jira_comment.py",
         ]
         if any(ind in execution_log for ind in indicators):
             return GuardrailResult(passed=True)
@@ -127,6 +128,34 @@ class MustUpdateJira(Guardrail):
             message=(
                 "Agent did not post any Jira comments."
                 " Team won't know what happened."
+            ),
+        )
+
+
+class MustCreatePullRequest(Guardrail):
+    """Ensure Claude created at least one pull request."""
+
+    def __init__(self):
+        super().__init__(
+            name="must_create_pull_request",
+            description="Agent must create at least one pull request",
+            severity="error",
+        )
+
+    def check(self, execution_log: str, context: dict) -> GuardrailResult:
+        indicators = [
+            "mcp__devflow-github__create_pull_request",
+            "mcp__devflow__create_pull_request",
+            "create_pull_request",
+            "pull/",  # GitHub PR URL in output
+        ]
+        if any(ind in execution_log for ind in indicators):
+            return GuardrailResult(passed=True)
+        return GuardrailResult(
+            passed=False,
+            message=(
+                "Agent did not create any pull requests."
+                " The implementation must result in a PR."
             ),
         )
 

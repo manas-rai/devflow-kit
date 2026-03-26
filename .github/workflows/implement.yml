@@ -1,27 +1,26 @@
-name: "DevFlow: Refine"
+name: "DevFlow: Implement"
 
 on:
   repository_dispatch:
-    types: [devflow-refine, devflow-re-refine]
+    types: [devflow-implement]
 
-run-name: "${{ github.event.action }} · ${{ github.event.client_payload.issue_key }} → ${{ github.event.client_payload.project_key }}"
+run-name: "implement · ${{ github.event.client_payload.issue_key }} → ${{ github.event.client_payload.project_key }}"
 
 jobs:
-  refine:
+  implement:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
-      - name: "📋 ${{ github.event.client_payload.issue_key }} | ${{ github.event.action }}"
+      - name: "📋 ${{ github.event.client_payload.issue_key }} | implement"
         run: |
           echo "╔══════════════════════════════════════════╗"
-          echo "║         DevFlow Kit — Refinement         ║"
+          echo "║       DevFlow Kit — Implementation       ║"
           echo "╠══════════════════════════════════════════╣"
-          echo "║ Event:     ${{ github.event.action }}"
           echo "║ Ticket:    ${{ github.event.client_payload.issue_key }}"
           echo "║ Project:   ${{ github.event.client_payload.project_key }}"
           echo "║ Component: ${{ github.event.client_payload.component }}"
-          echo "║ Summary:   ${{ github.event.client_payload.summary }}"
+          echo "║ GitHub:    ${{ github.event.client_payload.github_issue_url }}"
           echo "╚══════════════════════════════════════════╝"
 
       - name: Checkout devflow-kit
@@ -37,7 +36,7 @@ jobs:
           pip install httpx pydantic mcp
           npm install -g @anthropic-ai/claude-code
 
-      - name: "🤖 Run refinement · ${{ github.event.client_payload.issue_key }}"
+      - name: "🤖 Run implementation · ${{ github.event.client_payload.issue_key }}"
         env:
           PYTHONUNBUFFERED: "1"
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -50,7 +49,5 @@ jobs:
           COMPONENT: ${{ github.event.client_payload.component }}
           SUMMARY: ${{ github.event.client_payload.summary }}
           DESCRIPTION: ${{ github.event.client_payload.description }}
-          EVENT_TYPE: ${{ github.event.action }}
-          FEEDBACK: ${{ github.event.client_payload.feedback }}
-          GITHUB_ISSUE_NUMBER: ${{ github.event.client_payload.github_issue_number }}
-        run: python run_agent.py refinement
+          GITHUB_ISSUE_URL: ${{ github.event.client_payload.github_issue_url }}
+        run: python run_agent.py implementation

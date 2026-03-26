@@ -6,8 +6,8 @@
             "Write(*)",
             "Edit(*)",
             "WebFetch(*)",
-            "mcp__jira__*",
-            "mcp__github__*"
+            "mcp__devflow-jira__*",
+            "mcp__devflow-github__*"
         ],
         "deny": []
     }

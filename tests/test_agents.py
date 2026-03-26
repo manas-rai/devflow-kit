@@ -1,6 +1,7 @@
 """Tests for BaseAgent and concrete agent definitions."""
 
 from agents.refinement import RefinementAgent
+from agents.implementation import ImplementationAgent
 from framework.base_agent import AgentContext, BaseAgent
 from framework.tool import resolve_repo
 
@@ -46,9 +47,10 @@ class TestBaseAgent:
         )
         prompt = agent.build_prompt(ctx)
         assert "TEST-1" in prompt
-        assert "Test ticket" in prompt
         assert "org/repo" in prompt
         assert "{{issue_key}}" not in prompt
+        # New prompt fetches ticket content via MCP resources, not template vars
+        assert "business" in prompt.lower()
 
     def test_retry_prompt_appends_failure(self):
         agent = BaseAgent()
@@ -67,7 +69,7 @@ class TestRefinementAgent:
 
     def test_mcp_handles_jira_github(self):
         """Jira and GitHub tools are NOT in the agent's tools list.
-        They come from MCP servers configured in .claude/settings.json."""
+        They come from the devflow MCP server configured in .mcp.json."""
         agent = RefinementAgent()
         tool_names = [t.name for t in agent.tools]
         assert "create_github_issue" not in tool_names
@@ -98,4 +100,43 @@ class TestRefinementAgent:
         prompt = agent.build_prompt(ctx)
         assert "X-1" in prompt
         assert "org/x" in prompt
-        assert len(prompt) > 500  # Prompt should be substantial
+        assert len(prompt) > 500
+
+    def test_supports_re_refinement_context(self):
+        """Agent should accept extra context for re-refinement."""
+        ctx = AgentContext(
+            issue_key="X-1",
+            target_repo="org/x",
+            jira_base_url="https://x.atlassian.net",
+            extra={
+                "event_type": "devflow-re-refine",
+                "feedback": "Need more detail on testing",
+                "github_issue_number": "42",
+            },
+        )
+        assert ctx.extra["event_type"] == "devflow-re-refine"
+        assert ctx.extra["feedback"] == "Need more detail on testing"
+
+
+class TestImplementationAgent:
+    def test_has_required_guardrails(self):
+        agent = ImplementationAgent()
+        guardrail_names = [g.name for g in agent.guardrails]
+        assert "must_create_pull_request" in guardrail_names
+        assert "must_update_jira" in guardrail_names
+
+    def test_max_turns_is_higher(self):
+        """Implementation needs more turns than refinement."""
+        agent = ImplementationAgent()
+        assert agent.max_turns >= 40
+
+    def test_prompt_loads(self):
+        agent = ImplementationAgent()
+        ctx = AgentContext(
+            issue_key="X-1",
+            target_repo="org/x",
+            jira_base_url="https://x.atlassian.net",
+        )
+        prompt = agent.build_prompt(ctx)
+        assert "X-1" in prompt
+        assert "implementation" in prompt.lower()
