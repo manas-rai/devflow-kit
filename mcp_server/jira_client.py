@@ -155,7 +155,8 @@ class JiraClient:
         """Update the description field of a Jira ticket.
 
         Appends a DevFlow refinement section to the existing description,
-        preserving the original business content.
+        preserving the original business content. Parses markdown-style
+        headings and lists into proper ADF for Jira rendering.
         """
         # First, get the existing description
         async with httpx.AsyncClient() as client:
@@ -169,33 +170,24 @@ class JiraClient:
             existing = resp.json().get("fields", {}).get("description")
 
         # Build new description: existing + devflow section
-        content_blocks = []
+        content_blocks: list[dict] = []
 
         # Preserve existing description content
         if existing and isinstance(existing, dict):
             content_blocks.extend(existing.get("content", []))
 
         # Add separator
-        content_blocks.append({
-            "type": "rule",
-        })
+        content_blocks.append({"type": "rule"})
 
-        # Add DevFlow refinement section
+        # Add DevFlow refinement heading
         content_blocks.append({
             "type": "heading",
             "attrs": {"level": 2},
             "content": [{"type": "text", "text": "🤖 DevFlow Refinement"}],
         })
 
-        # Split description text into paragraphs
-        for paragraph in description.split("\n\n"):
-            paragraph = paragraph.strip()
-            if not paragraph:
-                continue
-            content_blocks.append({
-                "type": "paragraph",
-                "content": [{"type": "text", "text": paragraph}],
-            })
+        # Parse the markdown-style description into ADF blocks
+        content_blocks.extend(self._markdown_to_adf(description))
 
         payload = {
             "fields": {
@@ -215,6 +207,128 @@ class JiraClient:
                 json=payload,
             )
             resp.raise_for_status()
+
+    @staticmethod
+    def _markdown_to_adf(text: str) -> list[dict]:
+        """Convert markdown-style text to ADF blocks.
+
+        Supports:
+        - ## Heading → ADF heading level 3 (bold, larger)
+        - - item → bullet list
+        - - [ ] item → task list (checkbox)
+        - Plain text → paragraph
+        """
+        blocks: list[dict] = []
+        lines = text.split("\n")
+        i = 0
+
+        while i < len(lines):
+            line = lines[i]
+            stripped = line.strip()
+
+            # Skip empty lines
+            if not stripped:
+                i += 1
+                continue
+
+            # Heading (## or ###)
+            if stripped.startswith("## "):
+                blocks.append({
+                    "type": "heading",
+                    "attrs": {"level": 3},
+                    "content": [{
+                        "type": "text",
+                        "text": stripped[3:].strip(),
+                    }],
+                })
+                i += 1
+                continue
+
+            if stripped.startswith("### "):
+                blocks.append({
+                    "type": "heading",
+                    "attrs": {"level": 4},
+                    "content": [{
+                        "type": "text",
+                        "text": stripped[4:].strip(),
+                    }],
+                })
+                i += 1
+                continue
+
+            # Task list (- [ ] item)
+            if stripped.startswith("- [ ] ") or stripped.startswith("- [x] "):
+                task_items: list[dict] = []
+                while i < len(lines):
+                    s = lines[i].strip()
+                    if s.startswith("- [ ] "):
+                        task_items.append({
+                            "type": "taskItem",
+                            "attrs": {"state": "TODO", "localId": f"task-{i}"},
+                            "content": [{
+                                "type": "paragraph",
+                                "content": [{
+                                    "type": "text",
+                                    "text": s[6:].strip(),
+                                }],
+                            }],
+                        })
+                        i += 1
+                    elif s.startswith("- [x] "):
+                        task_items.append({
+                            "type": "taskItem",
+                            "attrs": {"state": "DONE", "localId": f"task-{i}"},
+                            "content": [{
+                                "type": "paragraph",
+                                "content": [{
+                                    "type": "text",
+                                    "text": s[6:].strip(),
+                                }],
+                            }],
+                        })
+                        i += 1
+                    else:
+                        break
+                blocks.append({
+                    "type": "taskList",
+                    "attrs": {"localId": f"tasklist-{i}"},
+                    "content": task_items,
+                })
+                continue
+
+            # Bullet list (- item)
+            if stripped.startswith("- "):
+                list_items: list[dict] = []
+                while i < len(lines):
+                    s = lines[i].strip()
+                    if s.startswith("- ") and not s.startswith("- [ ]") and not s.startswith("- [x]"):
+                        list_items.append({
+                            "type": "listItem",
+                            "content": [{
+                                "type": "paragraph",
+                                "content": [{
+                                    "type": "text",
+                                    "text": s[2:].strip(),
+                                }],
+                            }],
+                        })
+                        i += 1
+                    else:
+                        break
+                blocks.append({
+                    "type": "bulletList",
+                    "content": list_items,
+                })
+                continue
+
+            # Plain text → paragraph
+            blocks.append({
+                "type": "paragraph",
+                "content": [{"type": "text", "text": stripped}],
+            })
+            i += 1
+
+        return blocks
 
     async def transition_ticket(self, key: str, target_status: str) -> bool:
         """Transition a ticket to a new status. Returns True if successful."""

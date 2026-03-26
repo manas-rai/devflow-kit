@@ -35,26 +35,37 @@ No implementation steps. That's done later in the GitHub issue.
 
 ## Jira Refinement Format
 
-Your refinement MUST follow this format. Keep it concise and non-technical:
+Your refinement MUST follow this format. Use `##` for section headings so they
+render as bold, larger text in Jira. Keep content concise and non-technical:
 
 ```
-Current state:
+## Current State
 - [What already works today, e.g. "The system detects old snapshots and flags them for review"]
 - [Any existing capability, e.g. "EC2 and EBS volume actions can be previewed and executed"]
 
-What needs to change:
+## What Needs to Change
 - [Gap 1, e.g. "Preview mode doesn't work for snapshot actions — users get an error"]
-- [Gap 2, e.g. "No safety check to prevent deleting snapshots that are still in use by other resources"]
+- [Gap 2, e.g. "No safety check to prevent deleting snapshots that are still in use"]
 - [Gap 3, e.g. "Snapshot details like age and size aren't visible in the Action Center"]
 - [UX gap, e.g. "No way to filter the action list by resource type"]
 
-Scope: [Small / Medium / Large] — [1-2 sentence justification]
+## Acceptance Criteria
+- [ ] [Business outcome 1, e.g. "Users can preview snapshot deletion without errors"]
+- [ ] [Business outcome 2, e.g. "System blocks deletion of snapshots still linked to images"]
+- [ ] [Business outcome 3, e.g. "Snapshot age, size, and linked resources visible on detail page"]
+- [ ] [Business outcome 4, e.g. "Action list can be filtered by resource type"]
+- [ ] [Safety, e.g. "Clear irreversibility warning shown before snapshot deletion approval"]
+- [ ] [Regression, e.g. "Existing EC2 and EBS volume flows continue to work without changes"]
 
-Risks & considerations:
+## Scope
+[Small / Medium / Large] — [1-2 sentence justification]
+
+## Risks & Considerations
 - [Any business-relevant risk, e.g. "Snapshot deletion is irreversible — users need a clear warning"]
 - [Dependency, e.g. "Requires cloud permissions to be configured for the safety check"]
 
-Estimated complexity: [Low / Medium / High]
+## Estimated Complexity
+[Low / Medium / High]
 
 Ready for PM review. Once approved, move to "Ready for Dev" to start implementation.
 ```
