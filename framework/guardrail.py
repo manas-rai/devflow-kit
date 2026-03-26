@@ -105,19 +105,20 @@ class MustCreateGitHubIssue(Guardrail):
 
 
 class MustUpdateJira(Guardrail):
-    """Ensure Claude posted at least one Jira comment."""
+    """Ensure Claude updated Jira (description or comment)."""
 
     def __init__(self):
         super().__init__(
             name="must_update_jira",
-            description="Agent must post at least one comment to Jira",
+            description="Agent must update Jira (description or comment)",
             severity="warn",
         )
 
     def check(self, execution_log: str, context: dict) -> GuardrailResult:
         indicators = [
+            "mcp__devflow-jira__update_jira_description",
             "mcp__devflow-jira__post_jira_comment",
-            "mcp__devflow__post_jira_comment",
+            "update_jira_description",
             "post_jira_comment",
             "add_comment",
         ]
@@ -126,7 +127,7 @@ class MustUpdateJira(Guardrail):
         return GuardrailResult(
             passed=False,
             message=(
-                "Agent did not post any Jira comments."
+                "Agent did not update Jira."
                 " Team won't know what happened."
             ),
         )
