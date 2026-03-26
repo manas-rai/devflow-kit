@@ -151,6 +151,71 @@ class JiraClient:
             )
             resp.raise_for_status()
 
+    async def update_description(self, key: str, description: str) -> None:
+        """Update the description field of a Jira ticket.
+
+        Appends a DevFlow refinement section to the existing description,
+        preserving the original business content.
+        """
+        # First, get the existing description
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{self.base_url}/rest/api/3/issue/{key}",
+                auth=self._auth,
+                headers=self._headers,
+                params={"fields": "description"},
+            )
+            resp.raise_for_status()
+            existing = resp.json().get("fields", {}).get("description")
+
+        # Build new description: existing + devflow section
+        content_blocks = []
+
+        # Preserve existing description content
+        if existing and isinstance(existing, dict):
+            content_blocks.extend(existing.get("content", []))
+
+        # Add separator
+        content_blocks.append({
+            "type": "rule",
+        })
+
+        # Add DevFlow refinement section
+        content_blocks.append({
+            "type": "heading",
+            "attrs": {"level": 2},
+            "content": [{"type": "text", "text": "🤖 DevFlow Refinement"}],
+        })
+
+        # Split description text into paragraphs
+        for paragraph in description.split("\n\n"):
+            paragraph = paragraph.strip()
+            if not paragraph:
+                continue
+            content_blocks.append({
+                "type": "paragraph",
+                "content": [{"type": "text", "text": paragraph}],
+            })
+
+        payload = {
+            "fields": {
+                "description": {
+                    "version": 1,
+                    "type": "doc",
+                    "content": content_blocks,
+                }
+            }
+        }
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.put(
+                f"{self.base_url}/rest/api/3/issue/{key}",
+                auth=self._auth,
+                headers=self._headers,
+                json=payload,
+            )
+            resp.raise_for_status()
+
     async def transition_ticket(self, key: str, target_status: str) -> bool:
         """Transition a ticket to a new status. Returns True if successful."""
         async with httpx.AsyncClient() as client:

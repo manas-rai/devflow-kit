@@ -85,8 +85,26 @@ async def post_jira_comment(issue_key: str, comment: str) -> str:
 
 
 @mcp.tool()
+async def update_jira_description(issue_key: str, refinement_summary: str) -> str:
+    """Update the Jira ticket description with the refinement summary.
+
+    This APPENDS a "DevFlow Refinement" section to the existing description,
+    preserving the original business content written by the PM.
+
+    Args:
+        issue_key: Jira issue key (e.g. CWH-38)
+        refinement_summary: The refinement summary to append (approach, GitHub issue link, key findings)
+    """
+    await jira.update_description(issue_key, refinement_summary)
+    return f"✅ Updated description of {issue_key}"
+
+
+@mcp.tool()
 async def transition_jira_ticket(issue_key: str, status: str) -> str:
     """Move a Jira ticket to a new status.
+
+    IMPORTANT: The refinement agent should NOT use this tool.
+    Only the implementation agent should transition tickets.
 
     Args:
         issue_key: Jira issue key (e.g. CWH-38)
