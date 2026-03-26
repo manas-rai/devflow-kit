@@ -175,19 +175,15 @@ class AgentRunner:
         """Call the Claude Code CLI and return the full output.
 
         This is the ONLY subprocess call in the entire framework.
-        MCP servers are auto-loaded from .claude/settings.json
-        in the working directory.
+        MCP servers are auto-loaded from .mcp.json in the working directory.
         """
-        cmd = [self.claude_command, "-p", "--output-format", "stream-json", "--max-turns", str(max_turns)]
+        cmd = [self.claude_command, "-p", "--max-turns", str(max_turns)]
         if verbose:
             cmd.append("--verbose")
 
-        print(f"Invoking: {' '.join(cmd[:4])}... ({len(prompt)} chars)", file=sys.stderr, flush=True)
-        print("MCP servers loaded from .claude/settings.json", file=sys.stderr, flush=True)
-        print(f"Full command: {' '.join(cmd)}", file=sys.stderr, flush=True)
+        print(f"Invoking: {' '.join(cmd[:3])}... ({len(prompt)} chars)", file=sys.stderr, flush=True)
 
         try:
-            # Use Popen to stream output in real-time while also capturing it
             proc = subprocess.Popen(
                 cmd,
                 stdin=subprocess.PIPE,
@@ -195,50 +191,35 @@ class AgentRunner:
                 stderr=subprocess.PIPE,
                 text=True,
             )
-
-            # Send prompt and close stdin
             stdout_data, stderr_data = proc.communicate(
                 input=prompt, timeout=1800
             )
-
         except FileNotFoundError:
-            print("ERROR: 'claude' CLI not found. Is it installed?", file=sys.stderr, flush=True)
+            print("ERROR: 'claude' CLI not found.", file=sys.stderr, flush=True)
             return "ERROR: claude CLI not found"
         except subprocess.TimeoutExpired:
             proc.kill()
             print("ERROR: Claude CLI timed out after 30 minutes", file=sys.stderr, flush=True)
             return "ERROR: claude CLI timed out"
 
-        print(f"\n{'='*60}", file=sys.stderr, flush=True)
         print(f"Claude CLI exit code: {proc.returncode}", file=sys.stderr, flush=True)
-        print(f"Stdout length: {len(stdout_data)} chars", file=sys.stderr, flush=True)
-        print(f"Stderr length: {len(stderr_data)} chars", file=sys.stderr, flush=True)
-        print(f"{'='*60}", file=sys.stderr, flush=True)
+        print(f"Output: {len(stdout_data)} chars stdout, {len(stderr_data)} chars stderr", file=sys.stderr, flush=True)
 
-        # Print FULL stdout (Claude's response) so it appears in CI logs
         if stdout_data:
-            print(f"\n--- CLAUDE STDOUT (full) ---", file=sys.stderr, flush=True)
-            print(stdout_data[:5000], file=sys.stderr, flush=True)
-            if len(stdout_data) > 5000:
-                print(f"... ({len(stdout_data) - 5000} more chars truncated)", file=sys.stderr, flush=True)
-            print(f"--- END STDOUT ---\n", file=sys.stderr, flush=True)
+            print(f"\n--- CLAUDE OUTPUT ---", file=sys.stderr, flush=True)
+            print(stdout_data[:3000], file=sys.stderr, flush=True)
+            if len(stdout_data) > 3000:
+                print(f"... ({len(stdout_data) - 3000} more chars)", file=sys.stderr, flush=True)
+            print(f"--- END OUTPUT ---\n", file=sys.stderr, flush=True)
         else:
-            print("WARNING: Claude produced NO stdout output", file=sys.stderr, flush=True)
+            print("WARNING: Claude produced NO output", file=sys.stderr, flush=True)
 
-        # Print stderr (often contains MCP/tool errors and verbose output)
         if stderr_data:
-            print(f"\n--- CLAUDE STDERR (full) ---", file=sys.stderr, flush=True)
-            print(stderr_data[:5000], file=sys.stderr, flush=True)
-            if len(stderr_data) > 5000:
-                print(f"... ({len(stderr_data) - 5000} more chars truncated)", file=sys.stderr, flush=True)
-            print(f"--- END STDERR ---\n", file=sys.stderr, flush=True)
-        else:
-            print("NOTE: Claude produced no stderr output", file=sys.stderr, flush=True)
+            print(f"STDERR: {stderr_data[:1000]}", file=sys.stderr, flush=True)
 
         if proc.returncode != 0:
-            print(f"ERROR: Claude CLI failed with exit code {proc.returncode}", file=sys.stderr, flush=True)
+            print(f"ERROR: exit code {proc.returncode}", file=sys.stderr, flush=True)
 
-        # Combine stdout and stderr for the full execution log
         full_log = stdout_data
         if stderr_data:
             full_log += f"\n--- STDERR ---\n{stderr_data}"
@@ -266,10 +247,10 @@ class AgentRunner:
                         script=tool.script,
                     ))
 
-        # Detect MCP tool calls (pattern: mcp__server__tool_name)
+        # Detect MCP tool calls (pattern: mcp__server-name__tool_name)
         import re
 
-        mcp_pattern = r"mcp__(\w+)__(\w+)"
+        mcp_pattern = r"mcp__([\w-]+)__(\w+)"
         mcp_matches = re.findall(mcp_pattern, execution_log)
         for server, tool_name in mcp_matches:
             calls.append(ToolCall(

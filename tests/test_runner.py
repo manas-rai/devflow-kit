@@ -13,9 +13,9 @@ from framework.runner import AgentRunner
 from framework.tool import resolve_repo
 
 MOCK_LOG_SUCCESS = (
-    "Using mcp__github__create_issue in org/api\n"
+    "Using mcp__devflow-github__create_technical_issue in org/api\n"
     "https://github.com/org/api/issues/42\n"
-    "Using mcp__jira__add_comment on PROJ-100\n"
+    "Using mcp__devflow-jira__post_jira_comment on PROJ-100\n"
     "Comment posted.\n"
 )
 
@@ -40,20 +40,20 @@ def make_context() -> AgentContext:
     )
 
 
-def mock_subprocess_success(*args, **kwargs):
-    mock = MagicMock()
-    mock.returncode = 0
-    mock.stdout = MOCK_LOG_SUCCESS
-    mock.stderr = ""
-    return mock
+def mock_popen_success(*args, **kwargs):
+    """Mock subprocess.Popen that returns success output."""
+    mock_proc = MagicMock()
+    mock_proc.communicate.return_value = (MOCK_LOG_SUCCESS, "")
+    mock_proc.returncode = 0
+    return mock_proc
 
 
-def mock_subprocess_no_issue(*args, **kwargs):
-    mock = MagicMock()
-    mock.returncode = 0
-    mock.stdout = MOCK_LOG_NO_ISSUE
-    mock.stderr = ""
-    return mock
+def mock_popen_no_issue(*args, **kwargs):
+    """Mock subprocess.Popen that returns output without issue creation."""
+    mock_proc = MagicMock()
+    mock_proc.communicate.return_value = (MOCK_LOG_NO_ISSUE, "")
+    mock_proc.returncode = 0
+    return mock_proc
 
 
 class TestAgentRunnerSuccess:
@@ -63,13 +63,12 @@ class TestAgentRunnerSuccess:
         agent = MockAgent()
         ctx = make_context()
 
-        with patch("subprocess.run", side_effect=mock_subprocess_success):
+        with patch("subprocess.Popen", side_effect=mock_popen_success):
             result = await runner.run(agent, ctx)
 
         assert result.succeeded
         assert result.status == "success"
         assert result.attempts == 1
-        assert len(result.tool_calls) >= 1
 
     @pytest.mark.asyncio
     async def test_captures_mcp_tool_calls(self):
@@ -77,12 +76,12 @@ class TestAgentRunnerSuccess:
         agent = MockAgent()
         ctx = make_context()
 
-        with patch("subprocess.run", side_effect=mock_subprocess_success):
+        with patch("subprocess.Popen", side_effect=mock_popen_success):
             result = await runner.run(agent, ctx)
 
         tool_names = [tc.tool_name for tc in result.tool_calls]
-        assert "mcp__github__create_issue" in tool_names
-        assert "mcp__jira__add_comment" in tool_names
+        assert "mcp__devflow-github__create_technical_issue" in tool_names
+        assert "mcp__devflow-jira__post_jira_comment" in tool_names
 
 
 class TestAgentRunnerRetry:
@@ -100,10 +99,10 @@ class TestAgentRunnerRetry:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                return mock_subprocess_no_issue()
-            return mock_subprocess_success()
+                return mock_popen_no_issue()
+            return mock_popen_success()
 
-        with patch("subprocess.run", side_effect=alternating_mock):
+        with patch("subprocess.Popen", side_effect=alternating_mock):
             result = await runner.run(agent, ctx)
 
         assert result.succeeded
@@ -117,7 +116,7 @@ class TestAgentRunnerRetry:
         agent.retry_count = 1
         ctx = make_context()
 
-        with patch("subprocess.run", side_effect=mock_subprocess_no_issue):
+        with patch("subprocess.Popen", side_effect=mock_popen_no_issue):
             result = await runner.run(agent, ctx)
 
         assert not result.succeeded
@@ -139,7 +138,7 @@ class TestAgentRunnerLifecycle:
 
         agent.on_start = track_start
 
-        with patch("subprocess.run", side_effect=mock_subprocess_success):
+        with patch("subprocess.Popen", side_effect=mock_popen_success):
             await runner.run(agent, ctx)
 
         assert started == [True]
@@ -157,7 +156,7 @@ class TestAgentRunnerLifecycle:
 
         agent.on_failure = track_failure
 
-        with patch("subprocess.run", side_effect=mock_subprocess_no_issue):
+        with patch("subprocess.Popen", side_effect=mock_popen_no_issue):
             await runner.run(agent, ctx)
 
         assert len(failures) == 1

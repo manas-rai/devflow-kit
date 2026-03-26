@@ -1,16 +1,8 @@
-"""RefinementAgent — analyzes Jira tickets and creates technical GitHub issues.
+"""ImplementationAgent — creates branches and PRs from GitHub issue specs.
 
-This agent reads a business-focused Jira ticket, analyzes the target
-codebase, and creates a detailed technical GitHub issue for implementation.
-It also supports re-refinement when the PM provides feedback.
-
-This file is purely declarative — it defines WHAT the agent is:
-  - Which prompt to use
-  - Which tools Claude gets
-  - Which guardrails to enforce
-  - What happens on start/success/failure
-
-It does NOT define HOW the agent thinks. That's in prompts/refine.md.
+Triggered when a PM approves a refined ticket by moving it to "Ready for Dev".
+Reads the technical spec from the GitHub issue, creates a branch, implements
+changes, and raises a PR.
 """
 
 from __future__ import annotations
@@ -22,41 +14,30 @@ import httpx
 
 from framework.base_agent import AgentContext, BaseAgent
 from framework.guardrail import (
-    MaxSubtasks,
-    MustCreateGitHubIssue,
+    MustCreatePullRequest,
     MustUpdateJira,
     NoErrorsInOutput,
 )
 from framework.tool import resolve_repo
 
 
-class RefinementAgent(BaseAgent):
-    name = "refinement"
-    prompt_template = "prompts/refine.md"
+class ImplementationAgent(BaseAgent):
+    name = "implementation"
+    prompt_template = "prompts/implement.md"
 
-    # Bash tools only — Jira and GitHub are handled by the devflow MCP server
     tools = [resolve_repo]
 
     guardrails = [
-        MustCreateGitHubIssue(),
+        MustCreatePullRequest(),
         MustUpdateJira(),
-        MaxSubtasks(5),
         NoErrorsInOutput(),
     ]
 
-    max_turns = 30
+    max_turns = 50  # Implementation needs more turns
     retry_count = 1
 
     async def on_start(self, context: AgentContext) -> None:
-        """Post a comment to Jira that refinement has started."""
-        event_type = context.extra.get("event_type", "devflow-refine")
-        is_re_refine = event_type == "devflow-re-refine"
-
-        message = (
-            f"🤖 DevFlow Kit: {'Re-refining' if is_re_refine else 'Analyzing'} "
-            f"ticket and reading {context.target_repo}..."
-        )
-
+        """Post a comment to Jira that implementation has started."""
         try:
             base_url = context.jira_base_url.rstrip("/")
             auth = (
@@ -70,7 +51,15 @@ class RefinementAgent(BaseAgent):
                     "content": [
                         {
                             "type": "paragraph",
-                            "content": [{"type": "text", "text": message}],
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": (
+                                        f"🤖 DevFlow Kit: Implementation started. "
+                                        f"Creating branch and PR in {context.target_repo}..."
+                                    ),
+                                }
+                            ],
                         }
                     ],
                 }
@@ -89,7 +78,7 @@ class RefinementAgent(BaseAgent):
             print(f"on_start: Jira comment failed: {e}", file=sys.stderr)
 
     async def on_failure(self, context: AgentContext, error: str) -> None:
-        """Post the failure to Jira so the team knows."""
+        """Post the failure to Jira."""
         try:
             base_url = context.jira_base_url.rstrip("/")
             auth = (
@@ -111,7 +100,7 @@ class RefinementAgent(BaseAgent):
                                 {
                                     "type": "text",
                                     "text": (
-                                        f"❌ DevFlow Kit: Refinement failed\n\n"
+                                        f"❌ DevFlow Kit: Implementation failed\n\n"
                                         f"Error: {error[:300]}\n"
                                         f"Actions log: {run_url}"
                                     ),
