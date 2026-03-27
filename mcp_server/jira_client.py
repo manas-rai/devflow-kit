@@ -208,6 +208,44 @@ class JiraClient:
             )
             resp.raise_for_status()
 
+    async def get_story_points_field_id(self) -> str:
+        """Dynamically find the custom field ID for Story Points."""
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{self.base_url}/rest/api/3/field",
+                auth=self._auth,
+                headers=self._headers,
+            )
+            resp.raise_for_status()
+            fields = resp.json()
+            
+        for f in fields:
+            name = f.get("name", "").lower()
+            if name in ["story point estimate", "story points"]:
+                return f["id"]
+        
+        raise ValueError("Could not find Story Points field in Jira instance")
+
+    async def update_story_points(self, key: str, points: float) -> None:
+        """Update the story points for a ticket."""
+        if not hasattr(self, "_story_points_field_id"):
+            self._story_points_field_id = await self.get_story_points_field_id()
+            
+        payload = {
+            "fields": {
+                self._story_points_field_id: points
+            }
+        }
+        
+        async with httpx.AsyncClient() as client:
+            resp = await client.put(
+                f"{self.base_url}/rest/api/3/issue/{key}",
+                auth=self._auth,
+                headers=self._headers,
+                json=payload,
+            )
+            resp.raise_for_status()
+
     @staticmethod
     def _markdown_to_adf(text: str) -> list[dict]:
         """Convert markdown-style text to ADF blocks.
@@ -218,6 +256,9 @@ class JiraClient:
         - - [ ] item → task list (checkbox)
         - Plain text → paragraph
         """
+        # Handle cases where the LLM or JSON parsing results in literal \n characters
+        text = text.replace("\\n", "\n")
+        
         blocks: list[dict] = []
         lines = text.split("\n")
         i = 0

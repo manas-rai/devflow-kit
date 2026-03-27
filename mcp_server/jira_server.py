@@ -100,6 +100,18 @@ async def update_jira_description(issue_key: str, refinement_summary: str) -> st
 
 
 @mcp.tool()
+async def update_jira_story_points(issue_key: str, points: float) -> str:
+    """Update the story points estimate for a Jira ticket.
+
+    Args:
+        issue_key: Jira issue key (e.g. CWH-38)
+        points: The story point value to set (e.g. 1, 2, 3, 5, 8)
+    """
+    await jira.update_story_points(issue_key, points)
+    return f"✅ Updated story points for {issue_key} to {points}"
+
+
+@mcp.tool()
 async def transition_jira_ticket(issue_key: str, status: str) -> str:
     """Move a Jira ticket to a new status.
 
