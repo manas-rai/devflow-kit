@@ -218,6 +218,9 @@ class JiraClient:
         - - [ ] item → task list (checkbox)
         - Plain text → paragraph
         """
+        # Handle cases where the LLM or JSON parsing results in literal \n characters
+        text = text.replace("\\n", "\n")
+        
         blocks: list[dict] = []
         lines = text.split("\n")
         i = 0
