@@ -26,11 +26,12 @@ By default, GitHub prevents automated actions from opening Pull Requests. You mu
 4. Check the box for **Allow GitHub Actions to create and approve pull requests**
 5. Click **Save**
 
-## 3. Add the Claude Code Workflow
+## 3. Add the Claude Code Workflows
 
-The GitHub App triggers a workflow in the target repository whenever someone mentions `@claude`. You must add the workflow file to define what happens.
+The GitHub App uses workflow files in the target repository to define how it behaves. You should add two workflows: one for **Implementation** (triggered by Jira comments) and one for **Code Review** (triggered manually on PRs).
 
-Create a new file at `.github/workflows/claude.yml` in the target repository with this exact content:
+### A. The Implementation Agent
+Create `.github/workflows/claude.yml` with this exact content:
 
 ```yaml
 name: Claude Code
@@ -42,15 +43,12 @@ on:
     types: [created]
   issues:
     types: [opened, assigned]
-  pull_request_review:
-    types: [submitted]
 
 jobs:
   claude:
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
     permissions:
@@ -74,7 +72,50 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           additional_permissions: |
             actions: read
+          claude_args: '--allowed-tools Bash(gh pr:*)'
+```
+
+### B. The Manual Code Review Agent
+Create `.github/workflows/review.yml` with this exact content:
+
+This workflow allows humans to review the automated PRs using Claude Code as a second pair of eyes. By using `workflow_dispatch`, it prevents infinite bot loops.
+
+```yaml
+name: Claude Code Review
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull Request Number to review'
+        required: true
+        type: string
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Claude Code Review
+        id: claude-review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
+          plugins: 'code-review@claude-code-plugins'
+          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ inputs.pr_number }}'
 ```
 
 ## Summary
-Once these 3 steps are complete, DevFlow Kit's automated flow will successfully end with the Claude Code GitHub App picking up the `@claude` trigger and pushing a PR!
+Once these steps are complete:
+1. When Jira says "Ready for Dev", DevFlow Kit will automatically post `@claude` on a new issue.
+2. `claude.yml` will wake up, write the code, and autonomously open the PR.
+3. You can manually fire `review.yml` on that PR number to have Claude review its own work!
