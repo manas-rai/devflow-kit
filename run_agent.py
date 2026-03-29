@@ -18,7 +18,7 @@ import asyncio
 import os
 import sys
 
-from devflow_core.models import WorkItem, Spec
+from core.models import WorkItem, Spec
 from framework.base_agent import AgentContext
 from framework.runner import AgentRunner
 

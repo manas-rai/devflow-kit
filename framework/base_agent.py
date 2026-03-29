@@ -27,7 +27,7 @@ from pathlib import Path
 
 from framework.guardrail import Guardrail
 from framework.tool import Tool
-from devflow_core.models import WorkItem, Spec
+from core.models import WorkItem, Spec
 
 
 @dataclass

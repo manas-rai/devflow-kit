@@ -15,10 +15,10 @@ from typing import Any
 import sys
 from pathlib import Path
 
-# Add project root to path so we can import devflow_core
+# Add project root to path so we can import core
 sys.path.append(str(Path(__file__).parent.parent))
 
-from devflow_core.models import WorkItem
+from core.models import WorkItem
 
 
 class JiraClient:
