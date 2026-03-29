@@ -33,6 +33,9 @@ Now it's YOUR job to create the technical spec.
 5. **Update Jira** — use `post_jira_comment` to post:
    "Implementation started. GitHub Issue: [link]"
 
+6. **Start Work** — use `transition_jira_ticket` to move the Jira ticket to
+   "In Progress" now that Claude has officially started coding.
+
 ## GitHub Issue Technical Spec Format
 
 Your GitHub issue body MUST include:
@@ -79,6 +82,7 @@ Your GitHub issue body MUST include:
 - `post_github_comment` — Comment on an issue (for @claude trigger)
 - `post_jira_comment` — Post a comment to Jira
 - `search_code` — Search the target repo codebase
+- `transition_jira_ticket` — Move a Jira ticket to a new status
 
 ## Important Rules
 
