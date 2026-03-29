@@ -29,26 +29,27 @@ async def get_ticket(key: str) -> str:
     """Read a Jira ticket with business-level details: summary, description, AC, priority."""
     ticket = await jira.get_ticket(key)
     parts = [
-        f"# {ticket.key}: {ticket.summary}\n",
+        f"# {ticket.key}: {ticket.title}\n",
         f"**Status**: {ticket.status}",
-        f"**Priority**: {ticket.priority}",
-        f"**Type**: {ticket.issue_type}",
+        f"**Priority**: {ticket.metadata.get('priority', '')}",
+        f"**Type**: {ticket.item_type}",
     ]
-    if ticket.labels:
-        parts.append(f"**Labels**: {', '.join(ticket.labels)}")
-    if ticket.components:
-        parts.append(f"**Components**: {', '.join(ticket.components)}")
-    if ticket.parent_key:
-        parts.append(f"**Parent**: {ticket.parent_key}")
+    if ticket.metadata.get("labels"):
+        parts.append(f"**Labels**: {', '.join(ticket.metadata['labels'])}")
+    if ticket.metadata.get("components"):
+        parts.append(f"**Components**: {', '.join(ticket.metadata['components'])}")
+    if ticket.metadata.get("parent_key"):
+        parts.append(f"**Parent**: {ticket.metadata['parent_key']}")
 
     parts.append(f"\n## Description\n{ticket.description}")
 
-    if ticket.acceptance_criteria:
-        parts.append(f"\n## Acceptance Criteria\n{ticket.acceptance_criteria}")
+    if ticket.metadata.get("acceptance_criteria"):
+        parts.append(f"\n## Acceptance Criteria\n{ticket.metadata['acceptance_criteria']}")
 
-    if ticket.comments:
-        parts.append(f"\n## Recent Comments ({len(ticket.comments)})")
-        for c in ticket.comments[-5:]:
+    comments = ticket.metadata.get("comments", [])
+    if comments:
+        parts.append(f"\n## Recent Comments ({len(comments)})")
+        for c in comments[-5:]:
             parts.append(f"\n**{c['author']}** ({c['created']}):\n{c['body']}")
 
     return "\n".join(parts)

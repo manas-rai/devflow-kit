@@ -5,6 +5,8 @@ Usage:
     python run_agent.py refinement
     python run_agent.py implementation
     python run_agent.py sync
+    python run_agent.py verification
+    python run_agent.py decomposition
 
 This is pure wiring — reads env vars, creates context, picks the
 agent, hands it to the runner. Zero decision logic.
@@ -16,6 +18,7 @@ import asyncio
 import os
 import sys
 
+from devflow_core.models import WorkItem, Spec
 from framework.base_agent import AgentContext
 from framework.runner import AgentRunner
 
@@ -45,6 +48,16 @@ async def run_refinement() -> None:
 
     repo, branch = resolve_target_repo()
 
+    work_item = WorkItem(
+        id=os.environ.get("ISSUE_KEY", ""),
+        key=os.environ.get("ISSUE_KEY", ""),
+        title=os.environ.get("SUMMARY", ""),
+        description=os.environ.get("DESCRIPTION", ""),
+        status="To Do",
+        item_type="Story",
+        url=f"{os.environ.get('JIRA_BASE_URL', '')}/browse/{os.environ.get('ISSUE_KEY', '')}"
+    )
+
     context = AgentContext(
         issue_key=os.environ.get("ISSUE_KEY", ""),
         project_key=os.environ.get("PROJECT_KEY", ""),
@@ -54,6 +67,7 @@ async def run_refinement() -> None:
         jira_base_url=os.environ.get("JIRA_BASE_URL", ""),
         target_repo=repo,
         target_branch=branch,
+        work_item=work_item,
         extra={
             "feedback": os.environ.get("FEEDBACK", ""),
             "github_issue_number": os.environ.get("GITHUB_ISSUE_NUMBER", ""),
@@ -76,15 +90,36 @@ async def run_implementation() -> None:
 
     repo, branch = resolve_target_repo()
 
+    work_item = WorkItem(
+        id=os.environ.get("ISSUE_KEY", ""),
+        key=os.environ.get("ISSUE_KEY", ""),
+        title=os.environ.get("SUMMARY", ""),
+        description=os.environ.get("DESCRIPTION", ""),
+        status="Ready for Dev",
+        item_type="Story",
+        url=f"{os.environ.get('JIRA_BASE_URL', '')}/browse/{os.environ.get('ISSUE_KEY', '')}"
+    )
+
+    # Heuristic parsing to satisfy Spec object model
+    desc = os.environ.get("DESCRIPTION", "")
+    spec = Spec(
+        work_item_key=os.environ.get("ISSUE_KEY", ""),
+        summary=os.environ.get("SUMMARY", ""),
+        goals=[line for line in desc.split("\n") if line.startswith("- ")][:3],
+        acceptance_criteria=[line for line in desc.split("\n") if line.startswith("- [ ]")]
+    )
+
     context = AgentContext(
         issue_key=os.environ.get("ISSUE_KEY", ""),
         project_key=os.environ.get("PROJECT_KEY", ""),
         component=os.environ.get("COMPONENT", ""),
         summary=os.environ.get("SUMMARY", ""),
-        description=os.environ.get("DESCRIPTION", ""),
+        description=desc,
         jira_base_url=os.environ.get("JIRA_BASE_URL", ""),
         target_repo=repo,
         target_branch=branch,
+        work_item=work_item,
+        spec=spec,
         extra={
             "github_issue_url": os.environ.get("GITHUB_ISSUE_URL", ""),
         },
@@ -107,6 +142,65 @@ async def run_sync() -> None:
     await agent.poll_all_repos()
 
 
+async def run_verification() -> None:
+    from agents.verification import VerificationAgent
+
+    repo, branch = resolve_target_repo()
+
+    context = AgentContext(
+        issue_key=os.environ.get("ISSUE_KEY", ""),
+        project_key=os.environ.get("PROJECT_KEY", ""),
+        component=os.environ.get("COMPONENT", ""),
+        summary=os.environ.get("SUMMARY", ""),
+        description=os.environ.get("DESCRIPTION", ""),
+        jira_base_url=os.environ.get("JIRA_BASE_URL", ""),
+        target_repo=repo,
+        target_branch=branch,
+        extra={
+            "github_pr_url": os.environ.get("GITHUB_PR_URL", ""),
+            "event_type": os.environ.get("EVENT_TYPE", "devflow-verify"),
+        },
+    )
+
+    agent = VerificationAgent()
+    runner = AgentRunner()
+    result = await runner.run(agent, context)
+
+    _print_result(agent.name, result)
+
+    if not result.succeeded:
+        sys.exit(1)
+
+
+async def run_decomposition() -> None:
+    from agents.decomposition import DecompositionAgent
+
+    repo, branch = resolve_target_repo()
+
+    context = AgentContext(
+        issue_key=os.environ.get("ISSUE_KEY", ""),
+        project_key=os.environ.get("PROJECT_KEY", ""),
+        component=os.environ.get("COMPONENT", ""),
+        summary=os.environ.get("SUMMARY", ""),
+        description=os.environ.get("DESCRIPTION", ""),
+        jira_base_url=os.environ.get("JIRA_BASE_URL", ""),
+        target_repo=repo,
+        target_branch=branch,
+        extra={
+            "event_type": os.environ.get("EVENT_TYPE", "devflow-decompose"),
+        },
+    )
+
+    agent = DecompositionAgent()
+    runner = AgentRunner()
+    result = await runner.run(agent, context)
+
+    _print_result(agent.name, result)
+
+    if not result.succeeded:
+        sys.exit(1)
+
+
 def _print_result(agent_name: str, result) -> None:
     """Print agent execution summary."""
     print(f"\n{'='*60}")
@@ -125,7 +219,7 @@ def _print_result(agent_name: str, result) -> None:
 async def main() -> None:
     if len(sys.argv) < 2:
         print("Usage: python run_agent.py <agent_name>", file=sys.stderr)
-        print("Available agents: refinement, implementation, sync", file=sys.stderr)
+        print("Available agents: refinement, implementation, sync, verification, decomposition", file=sys.stderr)
         sys.exit(1)
 
     agent_name = sys.argv[1]
@@ -150,9 +244,13 @@ async def main() -> None:
         await run_implementation()
     elif agent_name == "sync":
         await run_sync()
+    elif agent_name == "verification":
+        await run_verification()
+    elif agent_name == "decomposition":
+        await run_decomposition()
     else:
         print(f"Unknown agent: {agent_name}", file=sys.stderr)
-        print("Available agents: refinement, implementation, sync", file=sys.stderr)
+        print("Available agents: refinement, implementation, sync, verification, decomposition", file=sys.stderr)
         sys.exit(1)
 
 

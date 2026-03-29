@@ -27,6 +27,7 @@ from pathlib import Path
 
 from framework.guardrail import Guardrail
 from framework.tool import Tool
+from devflow_core.models import WorkItem, Spec
 
 
 @dataclass
@@ -41,6 +42,11 @@ class AgentContext:
     jira_base_url: str = ""
     target_repo: str = ""
     target_branch: str = "main"
+    
+    # Core Domain Models
+    work_item: WorkItem | None = None
+    spec: Spec | None = None
+    
     extra: dict = field(default_factory=dict)
 
     def to_template_vars(self) -> dict[str, str]:

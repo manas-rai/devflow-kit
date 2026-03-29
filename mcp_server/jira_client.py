@@ -12,25 +12,13 @@ import os
 from dataclasses import dataclass, field
 from typing import Any
 
-import httpx
+import sys
+from pathlib import Path
 
+# Add project root to path so we can import devflow_core
+sys.path.append(str(Path(__file__).parent.parent))
 
-@dataclass
-class JiraTicket:
-    """Parsed Jira ticket with business-level fields."""
-
-    key: str
-    summary: str
-    description: str
-    status: str
-    priority: str
-    issue_type: str
-    labels: list[str] = field(default_factory=list)
-    components: list[str] = field(default_factory=list)
-    acceptance_criteria: str = ""
-    comments: list[dict[str, str]] = field(default_factory=list)
-    parent_key: str = ""
-    subtask_keys: list[str] = field(default_factory=list)
+from devflow_core.models import WorkItem
 
 
 class JiraClient:
@@ -51,7 +39,7 @@ class JiraClient:
             "Content-Type": "application/json",
         }
 
-    async def get_ticket(self, key: str) -> JiraTicket:
+    async def get_ticket(self, key: str) -> WorkItem:
         """Fetch a Jira ticket with all business-relevant fields."""
         async with httpx.AsyncClient() as client:
             resp = await client.get(
@@ -93,19 +81,23 @@ class JiraClient:
         parent = fields.get("parent", {})
         parent_key = parent.get("key", "") if parent else ""
 
-        return JiraTicket(
+        return WorkItem(
+            id=data.get("id", ""),
             key=key,
-            summary=fields.get("summary", ""),
+            title=fields.get("summary", ""),
             description=description,
             status=fields.get("status", {}).get("name", ""),
-            priority=fields.get("priority", {}).get("name", ""),
-            issue_type=fields.get("issuetype", {}).get("name", ""),
-            labels=fields.get("labels", []),
-            components=components,
-            acceptance_criteria=ac,
-            comments=comments,
-            parent_key=parent_key,
-            subtask_keys=subtasks,
+            item_type=fields.get("issuetype", {}).get("name", ""),
+            url=f"{self.base_url}/browse/{key}",
+            metadata={
+                "priority": fields.get("priority", {}).get("name", ""),
+                "labels": fields.get("labels", []),
+                "components": components,
+                "acceptance_criteria": ac,
+                "comments": comments,
+                "parent_key": parent_key,
+                "subtask_keys": subtasks,
+            }
         )
 
     async def get_comments(self, key: str) -> list[dict[str, str]]:
