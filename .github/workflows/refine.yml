@@ -27,14 +27,17 @@ jobs:
       - name: Checkout devflow-kit
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
 
       - name: Install dependencies
         run: |
-          pip install httpx pydantic mcp
+          uv sync
           npm install -g @anthropic-ai/claude-code
 
       - name: "🤖 Run refinement · ${{ github.event.client_payload.issue_key }}"
@@ -53,4 +56,4 @@ jobs:
           EVENT_TYPE: ${{ github.event.action }}
           FEEDBACK: ${{ github.event.client_payload.feedback }}
           GITHUB_ISSUE_NUMBER: ${{ github.event.client_payload.github_issue_number }}
-        run: python run_agent.py refinement
+        run: uv run python run_agent.py refinement
