@@ -46,6 +46,17 @@ class RefinementAgent(BaseAgent):
         NoErrorsInOutput(),
     ]
 
+    # Only allow refinement-related tools (enforced at Claude CLI level)
+    allowed_tools = [
+        "mcp__devflow-jira__update_jira_description",
+        "mcp__devflow-jira__update_jira_story_points",
+        "mcp__devflow-jira__post_jira_comment",
+        "mcp__devflow-github__search_code",
+        "Read", "Grep", "Glob", "WebSearch", "WebFetch",
+        "Bash", "ReadMcpResourceTool", "ListMcpResourcesTool",
+        "ToolSearch",
+    ]
+
     max_turns = 15  # Repo map reduces exploration; 15 turns is sufficient
     retry_count = 1
 
