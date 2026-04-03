@@ -97,7 +97,7 @@ class AgentRunner:
                 prompt = agent.get_retry_prompt(prompt, last_failure)
 
             # 3. Execute claude -p
-            execution_log, in_tok, out_tok = self._invoke_claude(
+            execution_log, in_tok, out_tok, exit_code = self._invoke_claude(
                 prompt=prompt,
                 max_turns=agent.max_turns,
                 verbose=agent.verbose,
@@ -105,6 +105,23 @@ class AgentRunner:
             )
             total_input_tokens += in_tok
             total_output_tokens += out_tok
+
+            # Hard failure if Claude CLI exited unexpectedly (e.g. hit max_turns limit)
+            if exit_code != 0:
+                duration = time.time() - start_time
+                error_msg = f"Claude CLI exited with code {exit_code} (possibly hit max_turns limit or auth error)"
+                print(f"ERROR: {error_msg}", file=sys.stderr, flush=True)
+                await agent.on_failure(context, error_msg)
+                return RunResult(
+                    status="failure",
+                    execution_log=execution_log,
+                    tool_calls=self._parse_tool_calls(execution_log, agent),
+                    attempts=attempt,
+                    duration_seconds=duration,
+                    error=error_msg,
+                    input_tokens=total_input_tokens,
+                    output_tokens=total_output_tokens,
+                )
 
             # 4. Parse tool calls from the log
             tool_calls = self._parse_tool_calls(execution_log, agent)
@@ -184,12 +201,8 @@ class AgentRunner:
         max_turns: int,
         verbose: bool,
         allowed_tools: list[str] | None = None,
-    ) -> tuple[str, int, int]:
-        """Call the Claude Code CLI and return (output, input_tokens, output_tokens).
-
-        This is the ONLY subprocess call in the entire framework.
-        MCP servers are auto-loaded from .mcp.json in the working directory.
-        """
+    ) -> tuple[str, int, int, int]:
+        """Call the Claude Code CLI and return (output, input_tokens, output_tokens, exit_code)."""
         cmd = [
             self.claude_command, "-p",
             "--max-turns", str(max_turns),
@@ -218,11 +231,11 @@ class AgentRunner:
             )
         except FileNotFoundError:
             print("ERROR: 'claude' CLI not found.", file=sys.stderr, flush=True)
-            return "ERROR: claude CLI not found", 0, 0
+            return "ERROR: claude CLI not found", 0, 0, 1
         except subprocess.TimeoutExpired:
             proc.kill()
             print("ERROR: Claude CLI timed out after 30 minutes", file=sys.stderr, flush=True)
-            return "ERROR: claude CLI timed out", 0, 0
+            return "ERROR: claude CLI timed out", 0, 0, 1
 
         print(f"Claude CLI exit code: {proc.returncode}", file=sys.stderr, flush=True)
         print(f"Output: {len(stdout_data)} chars stdout, {len(stderr_data)} chars stderr", file=sys.stderr, flush=True)
@@ -294,13 +307,11 @@ class AgentRunner:
         if proc.returncode != 0:
             print(f"ERROR: exit code {proc.returncode}", file=sys.stderr, flush=True)
 
-        # full_log uses raw stdout so guardrails can scan for tool call names
-        # (the JSON array contains all tool_use entries that guardrails look for)
         full_log = stdout_data
         if stderr_data:
             full_log += f"\n--- STDERR ---\n{stderr_data}"
 
-        return full_log, input_tokens, output_tokens
+        return full_log, input_tokens, output_tokens, proc.returncode
 
     def _parse_tool_calls(
         self, execution_log: str, agent: BaseAgent

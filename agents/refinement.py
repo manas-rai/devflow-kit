@@ -56,7 +56,7 @@ class RefinementAgent(BaseAgent):
         "Bash", "ReadMcpResourceTool", "ListMcpResourcesTool",
     ]
 
-    max_turns = 8  # Tight budget: read ticket + 2 searches + write desc + write points
+    max_turns = 12  # 4 turns overhead (ToolSearch/ReadMcpResource) + 2 searches + 1 read + 2 writes
     retry_count = 1
 
     async def on_start(self, context: AgentContext) -> None:
