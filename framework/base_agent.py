@@ -60,6 +60,7 @@ class AgentContext:
             "{{jira_base_url}}": self.jira_base_url.rstrip("/"),
             "{{target_repo}}": self.target_repo,
             "{{target_branch}}": self.target_branch,
+            "{{repo_map}}": self.extra.get("repo_map", "No repo map available."),
         }
 
 

@@ -15,6 +15,7 @@ Usage:
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import time
@@ -44,6 +45,8 @@ class RunResult:
     attempts: int = 1
     duration_seconds: float = 0.0
     error: str = ""
+    input_tokens: int = 0
+    output_tokens: int = 0
 
     @property
     def succeeded(self) -> bool:
@@ -82,6 +85,8 @@ class AgentRunner:
         prompt = agent.build_prompt(context)
         attempt = 0
         last_failure = ""
+        total_input_tokens = 0
+        total_output_tokens = 0
 
         while attempt <= agent.retry_count:
             attempt += 1
@@ -92,11 +97,13 @@ class AgentRunner:
                 prompt = agent.get_retry_prompt(prompt, last_failure)
 
             # 3. Execute claude -p
-            execution_log = self._invoke_claude(
+            execution_log, in_tok, out_tok = self._invoke_claude(
                 prompt=prompt,
                 max_turns=agent.max_turns,
                 verbose=agent.verbose,
             )
+            total_input_tokens += in_tok
+            total_output_tokens += out_tok
 
             # 4. Parse tool calls from the log
             tool_calls = self._parse_tool_calls(execution_log, agent)
@@ -141,6 +148,8 @@ class AgentRunner:
                     guardrail_results=guardrail_results,
                     attempts=attempt,
                     duration_seconds=duration,
+                    input_tokens=total_input_tokens,
+                    output_tokens=total_output_tokens,
                 )
 
             # Error guardrails failed — retry if possible
@@ -164,6 +173,8 @@ class AgentRunner:
             attempts=attempt,
             duration_seconds=duration,
             error=error_msg,
+            input_tokens=total_input_tokens,
+            output_tokens=total_output_tokens,
         )
 
     def _invoke_claude(
@@ -171,17 +182,24 @@ class AgentRunner:
         prompt: str,
         max_turns: int,
         verbose: bool,
-    ) -> str:
-        """Call the Claude Code CLI and return the full output.
+    ) -> tuple[str, int, int]:
+        """Call the Claude Code CLI and return (output, input_tokens, output_tokens).
 
         This is the ONLY subprocess call in the entire framework.
         MCP servers are auto-loaded from .mcp.json in the working directory.
         """
-        cmd = [self.claude_command, "-p", "--max-turns", str(max_turns)]
+        cmd = [
+            self.claude_command, "-p",
+            "--max-turns", str(max_turns),
+            "--output-format", "json",
+        ]
         if verbose:
             cmd.append("--verbose")
 
         print(f"Invoking: {' '.join(cmd[:3])}... ({len(prompt)} chars)", file=sys.stderr, flush=True)
+
+        input_tokens = 0
+        output_tokens = 0
 
         try:
             proc = subprocess.Popen(
@@ -196,20 +214,37 @@ class AgentRunner:
             )
         except FileNotFoundError:
             print("ERROR: 'claude' CLI not found.", file=sys.stderr, flush=True)
-            return "ERROR: claude CLI not found"
+            return "ERROR: claude CLI not found", 0, 0
         except subprocess.TimeoutExpired:
             proc.kill()
             print("ERROR: Claude CLI timed out after 30 minutes", file=sys.stderr, flush=True)
-            return "ERROR: claude CLI timed out"
+            return "ERROR: claude CLI timed out", 0, 0
 
         print(f"Claude CLI exit code: {proc.returncode}", file=sys.stderr, flush=True)
         print(f"Output: {len(stdout_data)} chars stdout, {len(stderr_data)} chars stderr", file=sys.stderr, flush=True)
 
-        if stdout_data:
+        # Parse JSON output for token tracking and result text
+        result_text = stdout_data
+        try:
+            parsed = json.loads(stdout_data)
+            # Claude CLI JSON format: {"result": "...", "input_tokens": N, "output_tokens": N}
+            if isinstance(parsed, dict):
+                result_text = parsed.get("result", stdout_data)
+                input_tokens = parsed.get("input_tokens", 0)
+                output_tokens = parsed.get("output_tokens", 0)
+                print(
+                    f"📊 Tokens: {input_tokens:,} input / {output_tokens:,} output",
+                    file=sys.stderr, flush=True,
+                )
+        except (json.JSONDecodeError, TypeError):
+            # Not JSON — fall back to raw text (older CLI versions)
+            pass
+
+        if result_text:
             print(f"\n--- CLAUDE OUTPUT ---", file=sys.stderr, flush=True)
-            print(stdout_data[:3000], file=sys.stderr, flush=True)
-            if len(stdout_data) > 3000:
-                print(f"... ({len(stdout_data) - 3000} more chars)", file=sys.stderr, flush=True)
+            print(result_text[:3000], file=sys.stderr, flush=True)
+            if len(result_text) > 3000:
+                print(f"... ({len(result_text) - 3000} more chars)", file=sys.stderr, flush=True)
             print(f"--- END OUTPUT ---\n", file=sys.stderr, flush=True)
         else:
             print("WARNING: Claude produced NO output", file=sys.stderr, flush=True)
@@ -220,11 +255,11 @@ class AgentRunner:
         if proc.returncode != 0:
             print(f"ERROR: exit code {proc.returncode}", file=sys.stderr, flush=True)
 
-        full_log = stdout_data
+        full_log = result_text
         if stderr_data:
             full_log += f"\n--- STDERR ---\n{stderr_data}"
 
-        return full_log
+        return full_log, input_tokens, output_tokens
 
     def _parse_tool_calls(
         self, execution_log: str, agent: BaseAgent

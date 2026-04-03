@@ -36,7 +36,7 @@ class ImplementationAgent(BaseAgent):
         NoErrorsInOutput(),
     ]
 
-    max_turns = 20  # Lightweight bridge, doesn't need many turns
+    max_turns = 10  # Repo map provides upfront context; 10 turns is sufficient
     retry_count = 1
 
     async def on_start(self, context: AgentContext) -> None:

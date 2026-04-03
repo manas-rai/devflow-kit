@@ -26,12 +26,21 @@ No implementation steps. That's done later in the GitHub issue.
 1. **Read the Jira ticket** — use `jira://ticket/{{issue_key}}` to understand
    the business requirement, acceptance criteria, and priority.
 
-2. **Read the target repo** — use `github://repo/{{target_repo}}` and
-   `search_code` to understand the codebase. This helps you assess feasibility
-   and identify risks — but you do NOT expose this to the PM.
+2. **Understand the codebase** — a structural map of the target repo is provided
+   below. It shows all classes, functions, and their signatures. Use this to
+   understand the architecture without reading full files. If you need the actual
+   implementation of a specific function, use `search_code` or read individual
+   files with `github://repo/{{target_repo}}/file/{path}` — but only when truly
+   necessary.
 
 3. **Write a business refinement** — use `update_jira_description` to append
    your analysis. This is what the PM reads.
+
+## Repository Structure
+
+```
+{{repo_map}}
+```
 
 ## Jira Refinement Format
 
