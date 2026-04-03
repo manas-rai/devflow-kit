@@ -46,7 +46,6 @@ class ImplementationAgent(BaseAgent):
         "mcp__devflow-jira__transition_jira_ticket",
         "Read", "Grep", "Glob", "WebSearch", "WebFetch",
         "Bash", "ReadMcpResourceTool", "ListMcpResourcesTool",
-        "ToolSearch",
     ]
 
     max_turns = 10  # Repo map provides upfront context; 10 turns is sufficient

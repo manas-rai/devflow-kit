@@ -54,10 +54,9 @@ class RefinementAgent(BaseAgent):
         "mcp__devflow-github__search_code",
         "Read", "Grep", "Glob", "WebSearch", "WebFetch",
         "Bash", "ReadMcpResourceTool", "ListMcpResourcesTool",
-        "ToolSearch",
     ]
 
-    max_turns = 15  # Repo map reduces exploration; 15 turns is sufficient
+    max_turns = 8  # Tight budget: read ticket + 2 searches + write desc + write points
     retry_count = 1
 
     async def on_start(self, context: AgentContext) -> None:
