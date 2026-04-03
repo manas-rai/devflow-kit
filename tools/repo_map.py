@@ -80,12 +80,18 @@ def extract_python_symbols(filepath: Path) -> list[str]:
             bases = [_name(b) for b in node.bases if _name(b)]
             base_str = f"({', '.join(bases)})" if bases else ""
             lines.append(f"  class {node.name}{base_str}:")
+            doc = _first_sentence_docstring(node)
+            if doc:
+                lines.append(f"    # {doc}")
 
             for item in ast.iter_child_nodes(node):
                 if isinstance(item, ast.FunctionDef | ast.AsyncFunctionDef):
                     sig = _func_signature(item)
                     prefix = "async " if isinstance(item, ast.AsyncFunctionDef) else ""
                     lines.append(f"    {prefix}def {sig}")
+                    doc = _first_sentence_docstring(item)
+                    if doc:
+                        lines.append(f"      # {doc}")
 
                 # Pydantic/dataclass field definitions
                 if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
@@ -96,8 +102,25 @@ def extract_python_symbols(filepath: Path) -> list[str]:
             sig = _func_signature(node)
             prefix = "async " if isinstance(node, ast.AsyncFunctionDef) else ""
             lines.append(f"  {prefix}def {sig}")
+            doc = _first_sentence_docstring(node)
+            if doc:
+                lines.append(f"    # {doc}")
 
     return lines
+
+
+def _first_sentence_docstring(node: ast.AST) -> str:
+    """Extract the first sentence of a docstring, if present."""
+    doc = ast.get_docstring(node)
+    if not doc:
+        return ""
+    # Take first sentence (up to first period, newline, or 120 chars)
+    first_line = doc.strip().split("\n")[0].strip()
+    # Trim to first sentence ending with a period
+    dot_idx = first_line.find(".")
+    if 0 < dot_idx < 120:
+        return first_line[: dot_idx + 1]
+    return first_line[:120]
 
 
 def _func_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
