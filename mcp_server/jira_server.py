@@ -48,9 +48,11 @@ async def get_ticket(key: str) -> str:
 
     comments = ticket.metadata.get("comments", [])
     if comments:
-        parts.append(f"\n## Recent Comments ({len(comments)})")
-        for c in comments[-5:]:
-            parts.append(f"\n**{c['author']}** ({c['created']}):\n{c['body']}")
+        recent = comments[-2:]  # Only last 2 comments to save tokens
+        parts.append(f"\n## Recent Comments ({len(recent)} of {len(comments)})")
+        for c in recent:
+            body = c['body'][:500] + ("..." if len(c['body']) > 500 else "")
+            parts.append(f"\n**{c['author']}** ({c['created']}):\n{body}")
 
     return "\n".join(parts)
 

@@ -23,6 +23,39 @@ from framework.base_agent import AgentContext
 from framework.runner import AgentRunner
 
 
+def _generate_repo_map(target_repo: str, branch: str = "main") -> str:
+    """Generate a structural repo map (zero LLM cost).
+
+    Uses AST parsing to extract class/function signatures from the target
+    repo. Returns a concise text map that gives the LLM a complete structural
+    understanding of the codebase in ~2K tokens instead of ~150K.
+    """
+    import subprocess as _sp
+
+    try:
+        result = _sp.run(
+            [
+                sys.executable,
+                "tools/repo_map.py",
+                "--repo",
+                target_repo,
+                "--branch",
+                branch,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            print(f"Repo map generated: {len(result.stdout)} chars", file=sys.stderr)
+            return result.stdout.strip()
+        print(f"Repo map generation failed: {result.stderr[:200]}", file=sys.stderr)
+    except Exception as e:
+        print(f"Repo map generation error: {e}", file=sys.stderr)
+
+    return "Repo map unavailable. Use search_code and get_file_content to explore."
+
+
 def resolve_target_repo() -> tuple[str, str]:
     """Read repo-map.json and resolve the target repo from env vars."""
     import subprocess
@@ -58,6 +91,9 @@ async def run_refinement() -> None:
         url=f"{os.environ.get('JIRA_BASE_URL', '')}/browse/{os.environ.get('ISSUE_KEY', '')}"
     )
 
+    # Generate repo map (zero LLM cost)
+    repo_map = _generate_repo_map(repo, branch)
+
     context = AgentContext(
         issue_key=os.environ.get("ISSUE_KEY", ""),
         project_key=os.environ.get("PROJECT_KEY", ""),
@@ -72,6 +108,7 @@ async def run_refinement() -> None:
             "feedback": os.environ.get("FEEDBACK", ""),
             "github_issue_number": os.environ.get("GITHUB_ISSUE_NUMBER", ""),
             "event_type": os.environ.get("EVENT_TYPE", "devflow-refine"),
+            "repo_map": repo_map,
         },
     )
 
@@ -109,6 +146,9 @@ async def run_implementation() -> None:
         acceptance_criteria=[line for line in desc.split("\n") if line.startswith("- [ ]")]
     )
 
+    # Generate repo map (zero LLM cost)
+    repo_map = _generate_repo_map(repo, branch)
+
     context = AgentContext(
         issue_key=os.environ.get("ISSUE_KEY", ""),
         project_key=os.environ.get("PROJECT_KEY", ""),
@@ -122,6 +162,7 @@ async def run_implementation() -> None:
         spec=spec,
         extra={
             "github_issue_url": os.environ.get("GITHUB_ISSUE_URL", ""),
+            "repo_map": repo_map,
         },
     )
 
@@ -208,6 +249,8 @@ def _print_result(agent_name: str, result) -> None:
     print(f"Status: {result.status}")
     print(f"Attempts: {result.attempts}")
     print(f"Duration: {result.duration_seconds:.1f}s")
+    if result.input_tokens or result.output_tokens:
+        print(f"Tokens: {result.input_tokens:,} input / {result.output_tokens:,} output")
     print(f"Tool calls: {len(result.tool_calls)}")
     for tc in result.tool_calls:
         print(f"  - {tc.tool_name}")

@@ -46,7 +46,7 @@ class RefinementAgent(BaseAgent):
         NoErrorsInOutput(),
     ]
 
-    max_turns = 30
+    max_turns = 15  # Repo map reduces exploration; 15 turns is sufficient
     retry_count = 1
 
     async def on_start(self, context: AgentContext) -> None:
