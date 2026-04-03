@@ -290,7 +290,9 @@ class AgentRunner:
         if proc.returncode != 0:
             print(f"ERROR: exit code {proc.returncode}", file=sys.stderr, flush=True)
 
-        full_log = result_text
+        # full_log uses raw stdout so guardrails can scan for tool call names
+        # (the JSON array contains all tool_use entries that guardrails look for)
+        full_log = stdout_data
         if stderr_data:
             full_log += f"\n--- STDERR ---\n{stderr_data}"
 
