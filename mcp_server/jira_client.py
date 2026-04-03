@@ -12,6 +12,8 @@ import os
 from dataclasses import dataclass, field
 from typing import Any
 
+import httpx
+
 import sys
 from pathlib import Path
 
