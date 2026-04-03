@@ -36,6 +36,19 @@ class ImplementationAgent(BaseAgent):
         NoErrorsInOutput(),
     ]
 
+    # Only allow implementation-related tools (enforced at Claude CLI level)
+    allowed_tools = [
+        "mcp__devflow-github__create_technical_issue",
+        "mcp__devflow-github__update_technical_issue",
+        "mcp__devflow-github__post_github_comment",
+        "mcp__devflow-github__search_code",
+        "mcp__devflow-jira__post_jira_comment",
+        "mcp__devflow-jira__transition_jira_ticket",
+        "Read", "Grep", "Glob", "WebSearch", "WebFetch",
+        "Bash", "ReadMcpResourceTool", "ListMcpResourcesTool",
+        "ToolSearch",
+    ]
+
     max_turns = 10  # Repo map provides upfront context; 10 turns is sufficient
     retry_count = 1
 

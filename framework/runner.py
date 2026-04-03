@@ -101,6 +101,7 @@ class AgentRunner:
                 prompt=prompt,
                 max_turns=agent.max_turns,
                 verbose=agent.verbose,
+                allowed_tools=agent.allowed_tools,
             )
             total_input_tokens += in_tok
             total_output_tokens += out_tok
@@ -182,6 +183,7 @@ class AgentRunner:
         prompt: str,
         max_turns: int,
         verbose: bool,
+        allowed_tools: list[str] | None = None,
     ) -> tuple[str, int, int]:
         """Call the Claude Code CLI and return (output, input_tokens, output_tokens).
 
@@ -193,6 +195,8 @@ class AgentRunner:
             "--max-turns", str(max_turns),
             "--output-format", "json",
         ]
+        if allowed_tools:
+            cmd.extend(["--allowedTools", ",".join(allowed_tools)])
         if verbose:
             cmd.append("--verbose")
 
@@ -301,33 +305,43 @@ class AgentRunner:
     def _parse_tool_calls(
         self, execution_log: str, agent: BaseAgent
     ) -> list[ToolCall]:
-        """Extract tool invocations from the execution log.
+        """Extract actual tool invocations from the JSON execution log.
 
-        Detects both Bash tool scripts and MCP tool calls.
+        Parses the JSON array to find tool_use content blocks in assistant
+        messages, rather than doing naive string matching which catches
+        tool names in the system init listing.
         """
         calls = []
 
-        # Detect Bash tool calls (from agent.tools)
-        for tool in agent.tools:
-            if tool.script in execution_log:
-                count = execution_log.count(f"python {tool.script}")
-                if count == 0:
-                    count = execution_log.count(tool.script)
-                for _ in range(max(count, 1)):
-                    calls.append(ToolCall(
-                        tool_name=tool.name,
-                        script=tool.script,
-                    ))
+        try:
+            parsed = json.loads(execution_log)
+            if not isinstance(parsed, list):
+                return calls
 
-        # Detect MCP tool calls (pattern: mcp__server-name__tool_name)
-        import re
+            for item in parsed:
+                if not isinstance(item, dict):
+                    continue
+                if item.get("type") != "assistant":
+                    continue
 
-        mcp_pattern = r"mcp__([\w-]+)__(\w+)"
-        mcp_matches = re.findall(mcp_pattern, execution_log)
-        for server, tool_name in mcp_matches:
-            calls.append(ToolCall(
-                tool_name=f"mcp__{server}__{tool_name}",
-                script=f"mcp:{server}/{tool_name}",
-            ))
+                message = item.get("message", {})
+                for block in message.get("content", []):
+                    if isinstance(block, dict) and block.get("type") == "tool_use":
+                        tool_name = block.get("name", "")
+                        calls.append(ToolCall(
+                            tool_name=tool_name,
+                            script=tool_name,
+                        ))
+
+        except (json.JSONDecodeError, TypeError):
+            # Fallback: regex-based detection for non-JSON output (e.g. tests)
+            import re
+            mcp_pattern = r'(mcp__[\w-]+__\w+)'
+            for match in re.finditer(mcp_pattern, execution_log):
+                tool_name = match.group(1)
+                calls.append(ToolCall(
+                    tool_name=tool_name,
+                    script=tool_name,
+                ))
 
         return calls

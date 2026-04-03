@@ -78,6 +78,7 @@ class BaseAgent:
     # --- Optional: configure these ---
     tools: list[Tool] = []
     guardrails: list[Guardrail] = []
+    allowed_tools: list[str] = []  # Claude CLI --allowedTools filter (empty = allow all)
     max_turns: int = 30
     retry_count: int = 1  # How many times to retry on guardrail failure
     verbose: bool = True
