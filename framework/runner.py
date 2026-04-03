@@ -227,18 +227,53 @@ class AgentRunner:
         result_text = stdout_data
         try:
             parsed = json.loads(stdout_data)
-            # Claude CLI JSON format: {"result": "...", "input_tokens": N, "output_tokens": N}
-            if isinstance(parsed, dict):
+
+            # Claude CLI --output-format json returns a JSON array of messages:
+            # [{"type":"system",...}, {"type":"assistant","message":{"usage":{...}}}, ...]
+            # The last element with type "result" contains the final text.
+            if isinstance(parsed, list):
+                # Extract final result text
+                for item in reversed(parsed):
+                    if isinstance(item, dict):
+                        # Look for the final result entry
+                        if item.get("type") == "result":
+                            result_text = item.get("result", "")
+                            input_tokens = item.get("total_input_tokens", 0) or item.get("input_tokens", 0)
+                            output_tokens = item.get("total_output_tokens", 0) or item.get("output_tokens", 0)
+                            break
+                        # Or extract from the last assistant message content
+                        if item.get("type") == "assistant" and "message" in item:
+                            msg = item["message"]
+                            # Get text from content blocks
+                            for block in msg.get("content", []):
+                                if isinstance(block, dict) and block.get("type") == "text":
+                                    result_text = block.get("text", "")
+
+                # Sum tokens from ALL assistant messages if not found in result entry
+                if input_tokens == 0:
+                    for item in parsed:
+                        if isinstance(item, dict) and item.get("type") == "assistant":
+                            usage = item.get("message", {}).get("usage", {})
+                            input_tokens += usage.get("input_tokens", 0)
+                            input_tokens += usage.get("cache_creation_input_tokens", 0)
+                            input_tokens += usage.get("cache_read_input_tokens", 0)
+                            output_tokens += usage.get("output_tokens", 0)
+
+            # Single object format (older CLI versions)
+            elif isinstance(parsed, dict):
                 result_text = parsed.get("result", stdout_data)
                 input_tokens = parsed.get("input_tokens", 0)
                 output_tokens = parsed.get("output_tokens", 0)
+
+            if input_tokens or output_tokens:
                 print(
-                    f"📊 Tokens: {input_tokens:,} input / {output_tokens:,} output",
+                    f"\U0001f4ca Tokens: {input_tokens:,} input / {output_tokens:,} output",
                     file=sys.stderr, flush=True,
                 )
-        except (json.JSONDecodeError, TypeError):
-            # Not JSON — fall back to raw text (older CLI versions)
-            pass
+
+        except (json.JSONDecodeError, TypeError) as e:
+            # Not JSON — fall back to raw text
+            print(f"JSON parse note: {e}", file=sys.stderr, flush=True)
 
         if result_text:
             print(f"\n--- CLAUDE OUTPUT ---", file=sys.stderr, flush=True)
