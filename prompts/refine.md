@@ -13,6 +13,7 @@ agent only. If you call them, the run will be considered a failure:
 - `post_github_comment` — FORBIDDEN during refinement
 - `update_technical_issue` — FORBIDDEN during refinement
 - `transition_jira_ticket` — FORBIDDEN during refinement
+- `ToolSearch` — FORBIDDEN. All your tools are listed below. Do NOT search for tools.
 
 ## Ticket
 - Key: {{issue_key}}
