@@ -32,6 +32,8 @@ class ToolCall:
     tool_name: str
     script: str
     output_snippet: str = ""
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 @dataclass
@@ -336,12 +338,25 @@ class AgentRunner:
                     continue
 
                 message = item.get("message", {})
+                usage = message.get("usage", {})
+                
+                # Each message has a usage block showing the tokens consumed up to that point
+                # (plus for that specific completion).
+                msg_in_tok = (
+                    usage.get("input_tokens", 0) +
+                    usage.get("cache_creation_input_tokens", 0) +
+                    usage.get("cache_read_input_tokens", 0)
+                )
+                msg_out_tok = usage.get("output_tokens", 0)
+
                 for block in message.get("content", []):
                     if isinstance(block, dict) and block.get("type") == "tool_use":
                         tool_name = block.get("name", "")
                         calls.append(ToolCall(
                             tool_name=tool_name,
                             script=tool_name,
+                            input_tokens=msg_in_tok,
+                            output_tokens=msg_out_tok,
                         ))
 
         except (json.JSONDecodeError, TypeError):
