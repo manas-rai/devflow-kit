@@ -253,7 +253,8 @@ def _print_result(agent_name: str, result) -> None:
         print(f"Tokens: {result.input_tokens:,} input / {result.output_tokens:,} output")
     print(f"Tool calls: {len(result.tool_calls)}")
     for tc in result.tool_calls:
-        print(f"  - {tc.tool_name}")
+        token_info = f" ({tc.input_tokens:,} in / {tc.output_tokens:,} out)" if tc.input_tokens or tc.output_tokens else ""
+        print(f"  - {tc.tool_name}{token_info}")
     if result.error:
         print(f"Error: {result.error}")
     print("=" * 60)
