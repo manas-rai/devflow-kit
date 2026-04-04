@@ -23,25 +23,32 @@ from framework.base_agent import AgentContext
 from framework.runner import AgentRunner
 
 
-def _generate_repo_map(target_repo: str, branch: str = "main") -> str:
+def _generate_repo_map(target_repo: str, branch: str = "main", compact: bool = False) -> str:
     """Generate a structural repo map (zero LLM cost).
 
     Uses AST parsing to extract class/function signatures from the target
     repo. Returns a concise text map that gives the LLM a complete structural
     understanding of the codebase in ~2K tokens instead of ~150K.
+
+    Args:
+        compact: If True, generates a minimal map with only top-level
+                 class/function names (no methods/signatures/docstrings).
     """
     import subprocess as _sp
 
     try:
+        cmd = [
+            sys.executable,
+            "tools/repo_map.py",
+            "--repo",
+            target_repo,
+            "--branch",
+            branch,
+        ]
+        if compact:
+            cmd.append("--compact")
         result = _sp.run(
-            [
-                sys.executable,
-                "tools/repo_map.py",
-                "--repo",
-                target_repo,
-                "--branch",
-                branch,
-            ],
+            cmd,
             capture_output=True,
             text=True,
             timeout=120,
@@ -91,8 +98,8 @@ async def run_refinement() -> None:
         url=f"{os.environ.get('JIRA_BASE_URL', '')}/browse/{os.environ.get('ISSUE_KEY', '')}"
     )
 
-    # Generate repo map (zero LLM cost)
-    repo_map = _generate_repo_map(repo, branch)
+    # Generate compact repo map for refinement (top-level only, ~4x smaller)
+    repo_map = _generate_repo_map(repo, branch, compact=True)
 
     context = AgentContext(
         issue_key=os.environ.get("ISSUE_KEY", ""),
