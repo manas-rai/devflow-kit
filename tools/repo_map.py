@@ -64,7 +64,7 @@ def should_skip(path: Path) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def extract_python_symbols(filepath: Path) -> list[str]:
+def extract_python_symbols(filepath: Path, compact: bool = False) -> list[str]:
     """Extract class/function signatures from a Python file using AST."""
     try:
         source = filepath.read_text(encoding="utf-8", errors="replace")
@@ -76,35 +76,38 @@ def extract_python_symbols(filepath: Path) -> list[str]:
 
     for node in ast.iter_child_nodes(tree):
         if isinstance(node, ast.ClassDef):
-            # Class with bases
             bases = [_name(b) for b in node.bases if _name(b)]
             base_str = f"({', '.join(bases)})" if bases else ""
-            lines.append(f"  class {node.name}{base_str}:")
-            doc = _first_sentence_docstring(node)
-            if doc:
-                lines.append(f"    # {doc}")
+            lines.append(f"  class {node.name}{base_str}")
 
-            for item in ast.iter_child_nodes(node):
-                if isinstance(item, ast.FunctionDef | ast.AsyncFunctionDef):
-                    sig = _func_signature(item)
-                    prefix = "async " if isinstance(item, ast.AsyncFunctionDef) else ""
-                    lines.append(f"    {prefix}def {sig}")
-                    doc = _first_sentence_docstring(item)
-                    if doc:
-                        lines.append(f"      # {doc}")
+            if not compact:
+                doc = _first_sentence_docstring(node)
+                if doc:
+                    lines.append(f"    # {doc}")
 
-                # Pydantic/dataclass field definitions
-                if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
-                    ann = _annotation_str(item.annotation)
-                    lines.append(f"    {item.target.id}: {ann}")
+                for item in ast.iter_child_nodes(node):
+                    if isinstance(item, ast.FunctionDef | ast.AsyncFunctionDef):
+                        sig = _func_signature(item)
+                        prefix = "async " if isinstance(item, ast.AsyncFunctionDef) else ""
+                        lines.append(f"    {prefix}def {sig}")
+                        doc = _first_sentence_docstring(item)
+                        if doc:
+                            lines.append(f"      # {doc}")
+
+                    if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+                        ann = _annotation_str(item.annotation)
+                        lines.append(f"    {item.target.id}: {ann}")
 
         elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
-            sig = _func_signature(node)
-            prefix = "async " if isinstance(node, ast.AsyncFunctionDef) else ""
-            lines.append(f"  {prefix}def {sig}")
-            doc = _first_sentence_docstring(node)
-            if doc:
-                lines.append(f"    # {doc}")
+            if compact:
+                lines.append(f"  def {node.name}()")
+            else:
+                sig = _func_signature(node)
+                prefix = "async " if isinstance(node, ast.AsyncFunctionDef) else ""
+                lines.append(f"  {prefix}def {sig}")
+                doc = _first_sentence_docstring(node)
+                if doc:
+                    lines.append(f"    # {doc}")
 
     return lines
 
@@ -266,8 +269,14 @@ EXTRACTORS = {
 }
 
 
-def generate_repo_map(repo_path: Path) -> str:
-    """Walk a local repo and generate a structural map."""
+def generate_repo_map(repo_path: Path, compact: bool = False) -> str:
+    """Walk a local repo and generate a structural map.
+
+    Args:
+        repo_path: Root of the repo to map.
+        compact: If True, emit only file names with top-level class/function
+                 names (no methods, signatures, or docstrings). ~4x smaller.
+    """
     output_blocks: list[str] = []
 
     # Collect and sort all source files
@@ -284,7 +293,17 @@ def generate_repo_map(repo_path: Path) -> str:
         if not extractor:
             continue
 
-        symbols = extractor(filepath)
+        # Pass compact flag to Python extractor; TS extractor doesn't support it yet
+        if filepath.suffix == ".py":
+            symbols = extractor(filepath, compact=compact)
+        else:
+            symbols = extractor(filepath)
+            if compact:
+                # For TS/JS in compact mode, keep only class/function/interface lines
+                symbols = [s for s in symbols if any(
+                    kw in s for kw in ("class ", "function ", "interface ", "type ", "export const ")
+                )]
+
         if symbols:
             output_blocks.append(f"{rel_path}:")
             output_blocks.extend(symbols)
@@ -319,6 +338,8 @@ def main() -> None:
     parser.add_argument("--repo", help="GitHub repo (owner/name)")
     parser.add_argument("--branch", default="main", help="Branch to clone (default: main)")
     parser.add_argument("--local", help="Path to a local repo (skip cloning)")
+    parser.add_argument("--compact", action="store_true",
+                        help="Compact mode: top-level class/function names only (no methods/signatures/docstrings)")
     args = parser.parse_args()
 
     if args.local:
@@ -326,14 +347,14 @@ def main() -> None:
         if not repo_path.exists():
             print(f"Error: {args.local} does not exist", file=sys.stderr)
             sys.exit(1)
-        repo_map = generate_repo_map(repo_path)
+        repo_map = generate_repo_map(repo_path, compact=args.compact)
         print(repo_map)
 
     elif args.repo:
         tmp_path = None
         try:
             tmp_path = clone_repo(args.repo, args.branch)
-            repo_map = generate_repo_map(tmp_path)
+            repo_map = generate_repo_map(tmp_path, compact=args.compact)
             print(repo_map)
         finally:
             if tmp_path and tmp_path.exists():
