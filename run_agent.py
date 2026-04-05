@@ -23,6 +23,17 @@ from framework.base_agent import AgentContext
 from framework.runner import AgentRunner
 
 
+def _get_runner(agent):
+    """Return the correct runner based on LLM_PROVIDER env var or agent config."""
+    provider = os.environ.get("LLM_PROVIDER", getattr(agent, "provider", "cli"))
+    if provider == "cli":
+        return AgentRunner()
+    else:
+        from framework.sdk_runner import SDKRunner
+        model = os.environ.get("LLM_MODEL", getattr(agent, "model", None))
+        return SDKRunner(provider=provider, model=model)
+
+
 def _generate_repo_map(target_repo: str, branch: str = "main", compact: bool = False) -> str:
     """Generate a structural repo map (zero LLM cost).
 
@@ -120,7 +131,7 @@ async def run_refinement() -> None:
     )
 
     agent = RefinementAgent()
-    runner = AgentRunner()
+    runner = _get_runner(agent)
     result = await runner.run(agent, context)
 
     _print_result(agent.name, result)
@@ -174,7 +185,7 @@ async def run_implementation() -> None:
     )
 
     agent = ImplementationAgent()
-    runner = AgentRunner()
+    runner = _get_runner(agent)
     result = await runner.run(agent, context)
 
     _print_result(agent.name, result)
