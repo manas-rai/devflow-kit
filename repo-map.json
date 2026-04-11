@@ -5,7 +5,9 @@
       "jira_project": "CWH",
       "component": "frontend/backend",
       "github_repo": "manas-rai/cloud-waste-hunter",
-      "default_branch": "main"
+      "default_branch": "main",
+      "llm_provider": "google",
+      "llm_model": "gemini-3.0-flash"
     }
   ],
   "defaults": {
