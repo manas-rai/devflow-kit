@@ -82,6 +82,8 @@ class BaseAgent:
     max_turns: int = 30
     retry_count: int = 1  # How many times to retry on guardrail failure
     verbose: bool = True
+    provider: str = "cli"  # "cli" | "anthropic" | "openai" | "google"
+    model: str | None = None  # Override the default model for the chosen provider
 
     def load_prompt_template(self) -> str:
         """Load the raw prompt template from file."""
