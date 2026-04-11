@@ -37,7 +37,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync
+          uv sync --all-extras
           npm install -g @anthropic-ai/claude-code
 
       - name: "🤖 Run refinement · ${{ github.event.client_payload.issue_key }}"
