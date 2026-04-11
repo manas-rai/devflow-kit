@@ -1,4 +1,4 @@
-.PHONY: help check setup setup-secrets setup-jira install lint format test test-verbose clean validate dev
+.PHONY: help check setup setup-secrets setup-jira install lint format test test-verbose clean validate dev env run-refinement run-implementation
 
 # Default target
 help: ## Show this help
@@ -20,6 +20,11 @@ help: ## Show this help
 	@echo "  make lint           Run linter"
 	@echo "  make format         Auto-format code"
 	@echo "  make dev            Install dev dependencies + run tests + lint"
+	@echo ""
+	@echo "LOCAL RUNS:"
+	@echo "  make env              Create .env from .env.example (first time)"
+	@echo "  make run-refinement   Run the refinement agent locally"
+	@echo "  make run-implementation Run the implementation agent locally"
 	@echo ""
 	@echo "OTHER:"
 	@echo "  make test-dispatch  Send a test event to trigger the refinement agent"
@@ -44,7 +49,7 @@ check: ## Check all prerequisites are installed
 # Full setup
 # ============================================================
 
-setup: check install setup-secrets validate ## Full first-time setup
+setup: check env install setup-secrets validate ## Full first-time setup
 	@echo ""
 	@echo "============================================"
 	@echo "✅ DevFlow Kit is ready!"
@@ -59,10 +64,9 @@ setup: check install setup-secrets validate ## Full first-time setup
 # Install dependencies
 # ============================================================
 
-install: ## Install Python and Node dependencies
+install: ## Install Python dependencies using uv
 	@echo "Installing Python dependencies..."
-	pip install httpx pydantic
-	pip install pytest pytest-asyncio ruff  # dev deps
+	uv sync --all-extras
 	@echo ""
 	@echo "Installing Claude Code CLI..."
 	npm install -g @anthropic-ai/claude-code
@@ -226,6 +230,30 @@ test-dispatch: ## Send a test refinement event to the hub
 		echo ""; \
 		echo "❌ HTTP $$HTTP_CODE — check PAT permissions."; \
 	fi
+
+# ============================================================
+# Local environment
+# ============================================================
+
+env: ## Create .env from .env.example (skips if .env already exists)
+	@if [ -f .env ]; then \
+		echo "✅ .env already exists — skipping. Edit it manually if needed."; \
+	else \
+		cp .env.example .env; \
+		echo "✅ .env created from .env.example."; \
+		echo ""; \
+		echo "👉 Open .env and fill in your credentials before running agents."; \
+	fi
+
+run-refinement: ## Run the refinement agent locally (loads .env automatically)
+	@test -f .env || (echo "❌ .env not found. Run: make env" && exit 1)
+	@echo "Loading .env and running refinement agent..."
+	set -a && . ./.env && set +a && uv run python run_agent.py refinement
+
+run-implementation: ## Run the implementation agent locally (loads .env automatically)
+	@test -f .env || (echo "❌ .env not found. Run: make env" && exit 1)
+	@echo "Loading .env and running implementation agent..."
+	set -a && . ./.env && set +a && uv run python run_agent.py implementation
 
 # ============================================================
 # Development
