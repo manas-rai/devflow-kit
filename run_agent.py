@@ -75,8 +75,11 @@ def _generate_repo_map(target_repo: str, branch: str = "main", compact: bool = F
 
 
 def resolve_target_repo() -> tuple[str, str]:
-    """Read repo-map.json and resolve the target repo from env vars."""
+    """Read repo-map.json and resolve the target repo from env vars.
+    Injects LLM_PROVIDER and LLM_MODEL into os.environ if specified.
+    """
     import subprocess
+    import json
 
     result = subprocess.run(
         [
@@ -90,8 +93,22 @@ def resolve_target_repo() -> tuple[str, str]:
         capture_output=True,
         text=True,
     )
-    parts = result.stdout.strip().split()
-    return (parts[0], parts[1]) if len(parts) >= 2 else ("", "main")
+    
+    if result.returncode != 0:
+        return ("", "main")
+        
+    try:
+        data = json.loads(result.stdout.strip())
+        
+        # Override global provider with route-specific provider if configured
+        if data.get("llm_provider"):
+            os.environ["LLM_PROVIDER"] = data["llm_provider"]
+        if data.get("llm_model"):
+            os.environ["LLM_MODEL"] = data["llm_model"]
+            
+        return (data.get("github_repo", ""), data.get("branch", "main"))
+    except json.JSONDecodeError:
+        return ("", "main")
 
 
 async def run_refinement() -> None:

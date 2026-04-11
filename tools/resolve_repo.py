@@ -30,7 +30,12 @@ def main() -> None:
             route["jira_project"] == args.project
             and route.get("component", "") == args.component
         ):
-            print(f"{route['github_repo']} {route.get('default_branch', 'main')}")
+            print(json.dumps({
+                "github_repo": route["github_repo"],
+                "branch": route.get("default_branch", "main"),
+                "llm_provider": route.get("llm_provider", ""),
+                "llm_model": route.get("llm_model", "")
+            }))
             return
 
     # Fallback
@@ -38,7 +43,12 @@ def main() -> None:
     repo = defaults.get("github_repo", "")
     branch = defaults.get("default_branch", "main")
     if repo:
-        print(f"{repo} {branch}")
+        print(json.dumps({
+            "github_repo": repo,
+            "branch": branch,
+            "llm_provider": defaults.get("llm_provider", ""),
+            "llm_model": defaults.get("llm_model", "")
+        }))
     else:
         print("ERROR: No matching route and no defaults configured", file=sys.stderr)
         sys.exit(1)
