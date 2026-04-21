@@ -227,3 +227,26 @@ class NoErrorsInOutput(Guardrail):
             passed=False,
             message=f"Tool errors detected: {errors_found[:3]}",
         )
+
+
+class ChecklistCompleted(Guardrail):
+    """Ensure the agent completed all checkboxes in its outputs."""
+
+    def __init__(self):
+        super().__init__(
+            name="checklist_completed",
+            description="Agent must check all boxes (- [x]) and not leave any open (- [ ])",
+            severity="warn",
+        )
+
+    def check(self, execution_log: str, context: dict) -> GuardrailResult:
+        # Fails if any unresolved markdown checkboxes were generated
+        if "- [ ]" in execution_log or "- []" in execution_log or "* [ ]" in execution_log:
+            return GuardrailResult(
+                passed=False,
+                message=(
+                    "Found unchecked checklist items ('- [ ]') in the agent output. "
+                    "Ensure all acceptance criteria and derived tasks are fully completed."
+                ),
+            )
+        return GuardrailResult(passed=True)

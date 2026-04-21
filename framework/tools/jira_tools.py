@@ -4,9 +4,10 @@ These functions are called by execute_tool() when the LLM wants to
 interact with Jira. They delegate to JiraClient and return formatted
 strings suitable for the agentic loop.
 """
+
 from __future__ import annotations
 
-import asyncio
+import contextlib
 import os
 import sys
 from pathlib import Path
@@ -26,7 +27,7 @@ def _make_client() -> JiraClient:
     )
 
 
-async def read_jira_ticket(issue_key: str) -> str:
+async def read_jira_ticket(issue_key: str, include_comments: bool = False) -> str:
     """Return formatted ticket info as a string."""
     client = _make_client()
     try:
@@ -46,7 +47,7 @@ async def read_jira_ticket(issue_key: str) -> str:
                 lines.append(f"Labels: {', '.join(work_item.metadata['labels'])}")
             if work_item.metadata.get("acceptance_criteria"):
                 lines.append(f"Acceptance Criteria:\n{work_item.metadata['acceptance_criteria']}")
-            if work_item.metadata.get("comments"):
+            if include_comments and work_item.metadata.get("comments"):
                 comments = work_item.metadata["comments"]
                 lines.append(f"Comments ({len(comments)}):")
                 for c in comments[:5]:
@@ -63,7 +64,11 @@ async def update_jira_description(issue_key: str, refinement_summary: str) -> st
         await client.update_description(issue_key, refinement_summary)
         return f"Successfully updated description for {issue_key}."
     except Exception as e:
-        return f"Error updating description for {issue_key}: {e}"
+        error_info = str(e)
+        if hasattr(e, "response") and e.response is not None:
+            with contextlib.suppress(AttributeError):
+                error_info += f" - Response: {e.response.text}"
+        return f"Error updating description for {issue_key}: {error_info}"
 
 
 async def update_jira_story_points(issue_key: str, story_points: float) -> str:
@@ -93,6 +98,8 @@ async def transition_jira_ticket(issue_key: str, status: str) -> str:
         success = await client.transition_ticket(issue_key, status)
         if success:
             return f"Successfully transitioned {issue_key} to '{status}'."
-        return f"Could not find transition to '{status}' for {issue_key}. Check available transitions."
+        return (
+            f"Could not find transition to '{status}' for {issue_key}. Check available transitions."
+        )
     except Exception as e:
         return f"Error transitioning {issue_key} to '{status}': {e}"

@@ -22,6 +22,7 @@ _JIRA_TOOLS: list[ToolDef] = [
             "type": "object",
             "properties": {
                 "issue_key": {"type": "string", "description": "The Jira issue key, e.g. PROJ-123"},
+                "include_comments": {"type": "boolean", "description": "Whether to include ticket comments (true for re-refinement)", "default": False},
             },
             "required": ["issue_key"],
         },

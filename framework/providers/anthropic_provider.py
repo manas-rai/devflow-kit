@@ -1,5 +1,7 @@
 """Anthropic Claude adapter."""
+
 from __future__ import annotations
+
 from framework.providers.base import LLMProvider, LLMResponse
 
 
@@ -15,7 +17,13 @@ class AnthropicProvider(LLMProvider):
         self.client = anthropic.Anthropic()  # Uses ANTHROPIC_API_KEY
         self.model = model
 
-    async def complete(self, system, messages, tools, max_tokens=4096) -> LLMResponse:
+    async def complete(
+        self,
+        system: str,
+        messages: list[dict],
+        tools: list,
+        max_tokens: int = 4096,
+    ) -> LLMResponse:
         # Convert ToolDef → Anthropic format
         anthropic_tools = [
             {"name": t.name, "description": t.description, "input_schema": t.parameters}
@@ -31,7 +39,8 @@ class AnthropicProvider(LLMProvider):
         usage = response.usage
         tool_calls = [
             {"id": b.id, "name": b.name, "input": b.input}
-            for b in response.content if b.type == "tool_use"
+            for b in response.content
+            if b.type == "tool_use"
         ]
         text = next((b.text for b in response.content if b.type == "text"), None)
         return LLMResponse(
@@ -43,7 +52,7 @@ class AnthropicProvider(LLMProvider):
             stop_reason=response.stop_reason,
         )
 
-    def format_tool_result(self, tool_use_id, content):
+    def format_tool_result(self, tool_use_id: str, name: str, content: str) -> dict:
         return {"type": "tool_result", "tool_use_id": tool_use_id, "content": content}
 
     def format_assistant_message(self, response: LLMResponse) -> dict:
@@ -51,5 +60,12 @@ class AnthropicProvider(LLMProvider):
         if response.text:
             content.append({"type": "text", "text": response.text})
         for tc in response.tool_calls:
-            content.append({"type": "tool_use", "id": tc["id"], "name": tc["name"], "input": tc["input"]})
+            content.append(
+                {
+                    "type": "tool_use",
+                    "id": tc["id"],
+                    "name": tc["name"],
+                    "input": tc["input"],
+                }
+            )
         return {"role": "assistant", "content": content}

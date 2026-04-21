@@ -73,7 +73,7 @@ class SDKRunner:
                     input_tokens=response.input_tokens,
                     output_tokens=response.output_tokens,
                 ))
-                tool_results.append(self.provider.format_tool_result(tc["id"], result))
+                tool_results.append(self.provider.format_tool_result(tc["id"], tc["name"], result))
 
             messages.append({"role": "user", "content": tool_results})
 
