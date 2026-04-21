@@ -9,13 +9,11 @@ Provides typed methods for all Jira operations needed by DevFlow Kit:
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+import sys
+from pathlib import Path
 from typing import Any
 
 import httpx
-
-import sys
-from pathlib import Path
 
 # Add project root to path so we can import core
 sys.path.append(str(Path(__file__).parent.parent))
@@ -67,11 +65,13 @@ class JiraClient:
         # Parse comments
         comments = []
         for c in fields.get("comment", {}).get("comments", []):
-            comments.append({
-                "author": c.get("author", {}).get("displayName", "Unknown"),
-                "body": self._adf_to_text(c.get("body")),
-                "created": c.get("created", ""),
-            })
+            comments.append(
+                {
+                    "author": c.get("author", {}).get("displayName", "Unknown"),
+                    "body": self._adf_to_text(c.get("body")),
+                    "created": c.get("created", ""),
+                }
+            )
 
         # Parse components
         components = [c.get("name", "") for c in fields.get("components", [])]
@@ -99,7 +99,7 @@ class JiraClient:
                 "comments": comments,
                 "parent_key": parent_key,
                 "subtask_keys": subtasks,
-            }
+            },
         )
 
     async def get_comments(self, key: str) -> list[dict[str, str]]:
@@ -115,11 +115,13 @@ class JiraClient:
 
         comments = []
         for c in data.get("comments", []):
-            comments.append({
-                "author": c.get("author", {}).get("displayName", "Unknown"),
-                "body": self._adf_to_text(c.get("body")),
-                "created": c.get("created", ""),
-            })
+            comments.append(
+                {
+                    "author": c.get("author", {}).get("displayName", "Unknown"),
+                    "body": self._adf_to_text(c.get("body")),
+                    "created": c.get("created", ""),
+                }
+            )
         return comments
 
     async def post_comment(self, key: str, text: str) -> None:
@@ -174,11 +176,13 @@ class JiraClient:
         content_blocks.append({"type": "rule"})
 
         # Add DevFlow refinement heading
-        content_blocks.append({
-            "type": "heading",
-            "attrs": {"level": 2},
-            "content": [{"type": "text", "text": "🤖 DevFlow Refinement"}],
-        })
+        content_blocks.append(
+            {
+                "type": "heading",
+                "attrs": {"level": 2},
+                "content": [{"type": "text", "text": "🤖 DevFlow Refinement"}],
+            }
+        )
 
         # Parse the markdown-style description into ADF blocks
         content_blocks.extend(self._markdown_to_adf(description))
@@ -212,25 +216,21 @@ class JiraClient:
             )
             resp.raise_for_status()
             fields = resp.json()
-            
+
         for f in fields:
             name = f.get("name", "").lower()
             if name in ["story point estimate", "story points"]:
                 return f["id"]
-        
+
         raise ValueError("Could not find Story Points field in Jira instance")
 
     async def update_story_points(self, key: str, points: float) -> None:
         """Update the story points for a ticket."""
         if not hasattr(self, "_story_points_field_id"):
             self._story_points_field_id = await self.get_story_points_field_id()
-            
-        payload = {
-            "fields": {
-                self._story_points_field_id: points
-            }
-        }
-        
+
+        payload = {"fields": {self._story_points_field_id: points}}
+
         async with httpx.AsyncClient() as client:
             resp = await client.put(
                 f"{self.base_url}/rest/api/3/issue/{key}",
@@ -241,7 +241,7 @@ class JiraClient:
             resp.raise_for_status()
 
     @staticmethod
-    def _markdown_to_adf(text: str) -> list[dict]:
+    def _markdown_to_adf(text: str) -> list[dict[str, Any]]:
         """Convert markdown-style text to ADF blocks.
 
         Supports:
@@ -250,9 +250,11 @@ class JiraClient:
         - - [ ] item → task list (checkbox)
         - Plain text → paragraph
         """
+        import uuid
+
         # Handle cases where the LLM or JSON parsing results in literal \n characters
         text = text.replace("\\n", "\n")
-        
+
         blocks: list[dict] = []
         lines = text.split("\n")
         i = 0
@@ -266,28 +268,35 @@ class JiraClient:
                 i += 1
                 continue
 
-            # Heading (## or ###)
             if stripped.startswith("## "):
-                blocks.append({
-                    "type": "heading",
-                    "attrs": {"level": 3},
-                    "content": [{
-                        "type": "text",
-                        "text": stripped[3:].strip(),
-                    }],
-                })
+                blocks.append(
+                    {
+                        "type": "heading",
+                        "attrs": {"level": 3},
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": stripped[3:].strip() or " ",
+                            }
+                        ],
+                    }
+                )
                 i += 1
                 continue
 
             if stripped.startswith("### "):
-                blocks.append({
-                    "type": "heading",
-                    "attrs": {"level": 4},
-                    "content": [{
-                        "type": "text",
-                        "text": stripped[4:].strip(),
-                    }],
-                })
+                blocks.append(
+                    {
+                        "type": "heading",
+                        "attrs": {"level": 4},
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": stripped[4:].strip() or " ",
+                            }
+                        ],
+                    }
+                )
                 i += 1
                 continue
 
@@ -297,38 +306,52 @@ class JiraClient:
                 while i < len(lines):
                     s = lines[i].strip()
                     if s.startswith("- [ ] "):
-                        task_items.append({
-                            "type": "taskItem",
-                            "attrs": {"state": "TODO", "localId": f"task-{i}"},
-                            "content": [{
-                                "type": "paragraph",
-                                "content": [{
-                                    "type": "text",
-                                    "text": s[6:].strip(),
-                                }],
-                            }],
-                        })
+                        task_items.append(
+                            {
+                                "type": "taskItem",
+                                "attrs": {"state": "TODO", "localId": str(uuid.uuid4())},
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": s[6:].strip(),
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
+                        )
                         i += 1
                     elif s.startswith("- [x] "):
-                        task_items.append({
-                            "type": "taskItem",
-                            "attrs": {"state": "DONE", "localId": f"task-{i}"},
-                            "content": [{
-                                "type": "paragraph",
-                                "content": [{
-                                    "type": "text",
-                                    "text": s[6:].strip(),
-                                }],
-                            }],
-                        })
+                        task_items.append(
+                            {
+                                "type": "taskItem",
+                                "attrs": {"state": "DONE", "localId": str(uuid.uuid4())},
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": s[6:].strip() or " ",
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
+                        )
                         i += 1
                     else:
                         break
-                blocks.append({
-                    "type": "taskList",
-                    "attrs": {"localId": f"tasklist-{i}"},
-                    "content": task_items,
-                })
+                blocks.append(
+                    {
+                        "type": "taskList",
+                        "attrs": {"localId": str(uuid.uuid4())},
+                        "content": task_items,
+                    }
+                )
                 continue
 
             # Bullet list (- item)
@@ -336,31 +359,46 @@ class JiraClient:
                 list_items: list[dict] = []
                 while i < len(lines):
                     s = lines[i].strip()
-                    if s.startswith("- ") and not s.startswith("- [ ]") and not s.startswith("- [x]"):
-                        list_items.append({
-                            "type": "listItem",
-                            "content": [{
-                                "type": "paragraph",
-                                "content": [{
-                                    "type": "text",
-                                    "text": s[2:].strip(),
-                                }],
-                            }],
-                        })
+                    is_bullet = (
+                        s.startswith("- ")
+                        and not s.startswith("- [ ]")
+                        and not s.startswith("- [x]")
+                    )
+                    if is_bullet:
+                        list_items.append(
+                            {
+                                "type": "listItem",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": s[2:].strip() or " ",
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
+                        )
                         i += 1
                     else:
                         break
-                blocks.append({
-                    "type": "bulletList",
-                    "content": list_items,
-                })
+                blocks.append(
+                    {
+                        "type": "bulletList",
+                        "content": list_items,
+                    }
+                )
                 continue
 
             # Plain text → paragraph
-            blocks.append({
-                "type": "paragraph",
-                "content": [{"type": "text", "text": stripped}],
-            })
+            blocks.append(
+                {
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": stripped or " "}],
+                }
+            )
             i += 1
 
         return blocks
