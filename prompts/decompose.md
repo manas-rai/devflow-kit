@@ -12,12 +12,23 @@ By breaking this down, you allow multiple Claude Code implementation instances t
 ## Epic Description / Refined Spec
 {{description}}
 
+## Repository Knowledge Graph
+Use this to draw subtask boundaries along the codebase's *real* structure. If it
+is a Graphify graph, **Community Hubs** are the natural component boundaries
+(split one subtask per community) and **God Nodes** are highly-connected shared
+hotspots.
+
+```
+{{repo_map}}
+```
+
 ## Your Process
 
-1. **Analyze the Spec** — Read the refined Spec and architecture above. Identify the distinct components (e.g., API layer, Database schema, Frontend UI, background workers).
+1. **Analyze the Spec** — Read the refined Spec and the knowledge graph above. Identify the distinct components (e.g., API layer, Database schema, Frontend UI, background workers), preferring the graph's Community Hubs as your boundaries.
 2. **Design the Task Graph** — Break the work into 2 to 5 distinct tasks. Ensure that each task has:
    - Minimal dependency on the other tasks (so they can be built in parallel).
    - A clear subset of the Acceptance Criteria.
+   - **Non-overlapping file scope** — a single God Node (shared hotspot) must NOT be edited by two subtasks at once. If a change centers on a God Node, keep it in one subtask or sequence the others after it via a dependency.
 3. **Create the Issues** — For each task you identified, use the `create_technical_issue` tool to open a new issue in GitHub. 
    - Ensure the issue title is prefixed with the Epic key (e.g., `[{{issue_key}}] Build Database Schema`).
    - The issue description MUST contain the `@claude` tag to automatically trigger the implementation agent.
