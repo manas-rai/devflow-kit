@@ -9,8 +9,13 @@ from framework.providers.base import LLMProvider, LLMResponse
 
 class OpenAIProvider(LLMProvider):
     def __init__(self, model: str = "gpt-4o"):
-        import openai
-
+        try:
+            import openai
+        except ImportError as exc:
+            raise ImportError(
+                "The 'openai' package is required for OpenAIProvider. "
+                "Install it with: pip install 'devflow-kit[openai]' or pip install openai"
+            ) from exc
         self.client = openai.OpenAI()
         self.model = model
 

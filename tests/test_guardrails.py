@@ -32,17 +32,11 @@ I think the approach should be...
 """
 
 MOCK_LOG_DECOMPOSE = """
-Using mcp__jira__create_issue for subtask under PROJ-100
-Created PROJ-101
-Using mcp__jira__create_issue for subtask under PROJ-100
-Created PROJ-102
-Using mcp__jira__create_issue for subtask under PROJ-100
-Created PROJ-103
-Using mcp__github__create_issue in org/api for PROJ-101
+Using mcp__devflow-github__create_technical_issue in org/api for PROJ-101
 https://github.com/org/api/issues/43
-Using mcp__github__create_issue in org/api for PROJ-102
+Using mcp__devflow-github__create_technical_issue in org/api for PROJ-102
 https://github.com/org/api/issues/44
-Using mcp__github__create_issue in org/api for PROJ-103
+Using mcp__devflow-github__create_technical_issue in org/api for PROJ-103
 https://github.com/org/api/issues/45
 Using mcp__jira__add_comment on PROJ-100
 Decomposition posted.

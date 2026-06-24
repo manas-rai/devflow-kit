@@ -28,7 +28,8 @@ repo-map.json    → Jira project → GitHub repo routing config
 
 ## Key Patterns
 
-- **Agents are declarative**: they define tools, guardrails, and prompts — Claude makes all decisions. No algorithmic control flow inside agents.
+- **Agents are declarative**: they define tools, guardrails, and prompts — Claude makes all decisions. No algorithmic control flow inside agents. **Exception**: `agents/sync.py` is a deterministic, LLM-free PR-state poller (cron-driven, talks to GitHub/Jira REST directly) — there's no judgement for a model to make, so it intentionally isn't a `BaseAgent`.
+- **Unified tool names**: the SDK tool registry (`framework/tools/`) and the MCP servers (`mcp_server/`) expose the SAME tool names (e.g. `create_technical_issue`), so prompts and guardrails work identically under both runners. Keep them in sync when adding tools.
 - **Provider abstraction**: All LLM calls go through `framework/providers/base.py` (LLMProvider ABC). Never import `anthropic`/`openai`/`google` directly in runners or agents.
 - **Canonical formats**: `ToolDef`, `LLMResponse`, `CanonicalMessage` in `framework/providers/base.py` — providers convert to/from these.
 - **Two runners**: `AgentRunner` (CLI via `claude -p`) and `SDKRunner` (direct API calls). Selected by `LLM_PROVIDER` env var (`cli` vs `anthropic`/`openai`/`google`).

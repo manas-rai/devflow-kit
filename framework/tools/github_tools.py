@@ -45,13 +45,13 @@ async def search_code(repo: str, query: str) -> str:
         return f"Error searching code in {repo}: {e}"
 
 
-async def create_github_issue(
+async def create_technical_issue(
     repo: str,
     title: str,
     body: str,
     labels: list[str] | None = None,
 ) -> str:
-    """Create a GitHub issue and return its URL."""
+    """Create a GitHub issue with a technical spec and return its URL."""
     client = _make_client()
     owner, name = _split_repo(repo)
     try:
@@ -61,7 +61,7 @@ async def create_github_issue(
         return f"Error creating GitHub issue in {repo}: {e}"
 
 
-async def update_github_issue(
+async def update_technical_issue(
     repo: str,
     issue_number: int,
     title: str | None = None,

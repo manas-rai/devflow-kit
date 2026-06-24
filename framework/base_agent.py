@@ -15,7 +15,7 @@ Usage:
     class MyAgent(BaseAgent):
         name = "my_agent"
         prompt_template = "prompts/my_agent.md"
-        tools = [create_github_issue, post_jira_comment]
+        tools = [create_technical_issue, post_jira_comment]
         guardrails = [MustCreateGitHubIssue()]
         max_turns = 30
 """

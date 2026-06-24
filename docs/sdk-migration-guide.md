@@ -362,7 +362,7 @@ async def transition_jira_ticket(issue_key: str, transition: str) -> str: ...
 
 # framework/tools/github_tools.py
 async def search_code(repo: str, query: str) -> str: ...
-async def create_github_issue(repo: str, title: str, body: str) -> str: ...
+async def create_technical_issue(repo: str, title: str, body: str) -> str: ...
 async def create_branch(repo: str, branch: str, base: str) -> str: ...
 async def create_pull_request(repo: str, title: str, body: str, head: str, base: str) -> str: ...
 async def post_github_comment(repo: str, issue_number: int, comment: str) -> str: ...
@@ -478,7 +478,7 @@ async def git_push(branch: str) -> str:
 Read Jira ticket     → jira_tools.read_jira_ticket()
 Read repo structure  → repo_map (injected into prompt)
 Search specific code → github_tools.search_code()
-Create GitHub issue  → github_tools.create_github_issue()
+Create GitHub issue  → github_tools.create_technical_issue()
 Post Jira comment    → jira_tools.post_jira_comment()
 Transition ticket    → jira_tools.transition_jira_ticket()
 ```
@@ -545,7 +545,7 @@ You will:
 
 ### Phase 1 — Planning tools (use first)
 - `read_jira_ticket` — Read business requirements
-- `create_github_issue` — Create the tech spec issue
+- `create_technical_issue` — Create the tech spec issue
 - `post_jira_comment` — Notify team
 - `transition_jira_ticket` — Move to In Progress
 - `search_code` — Search codebase
@@ -560,7 +560,7 @@ You will:
 ## Execution Sequence
 1. Call `read_jira_ticket`
 2. Review the repo map below
-3. Call `create_github_issue` with the full technical spec
+3. Call `create_technical_issue` with the full technical spec
 4. Call `post_jira_comment` and `transition_jira_ticket`
 5. Call `read_file` to understand the files you need to change
 6. Implement the changes using `write_file`
