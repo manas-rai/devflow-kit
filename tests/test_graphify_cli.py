@@ -109,3 +109,17 @@ def test_discover_sync_skips_unfetchable_head(monkeypatch, capsys):
     cli.cmd_discover(argparse.Namespace(mode="sync", force=False))
     out = json.loads(capsys.readouterr().out)
     assert out["include"] == []
+
+
+def test_count_source_files_skips_noise(tmp_path):
+    from tools.graphify_engine import count_source_files
+
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "app.py").write_text("x = 1")
+    (tmp_path / "README.md").write_text("docs")
+    # skipped: lockfile, vendored dir
+    (tmp_path / "uv.lock").write_text("lock")
+    (tmp_path / "node_modules").mkdir()
+    (tmp_path / "node_modules" / "dep.js").write_text("noise")
+
+    assert count_source_files(tmp_path) == 2  # app.py + README.md only

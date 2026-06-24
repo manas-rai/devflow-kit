@@ -34,13 +34,61 @@ def _get_runner(agent):
         return SDKRunner(provider=provider, model=model)
 
 
-def _fetch_graph_report(target_repo: str, branch: str = "main") -> str | None:
+def _live_head_sha(repo: str, branch: str) -> str | None:
+    """Best-effort current HEAD SHA of the target's branch (for staleness checks)."""
+    try:
+        from tools.graphify_cli import github_head_sha
+
+        return github_head_sha(repo, branch)
+    except Exception:
+        return None
+
+
+def _focus_hint(report: str, ticket_text: str, max_lines: int = 12) -> str:
+    """Build an additive "likely relevant" pointer from ticket keywords.
+
+    Non-destructive: highlights graph lines that mention ticket terms so the
+    agent knows where to look first, without removing any context. Returns ""
+    when there is no ticket text or nothing matches.
+    """
+    import re
+
+    stop = {
+        "this", "that", "with", "from", "into", "when", "then", "should", "must",
+        "have", "need", "will", "ticket", "issue", "code", "file", "files", "test",
+        "tests", "value", "using", "your", "they", "them", "able",
+    }
+    terms = {w for w in re.findall(r"[A-Za-z_]{4,}", ticket_text.lower())} - stop
+    if not terms:
+        return ""
+
+    matched: list[str] = []
+    for line in report.splitlines():
+        stripped = line.strip()
+        if stripped and any(t in stripped.lower() for t in terms):
+            matched.append(stripped)
+        if len(matched) >= max_lines:
+            break
+    if not matched:
+        return ""
+
+    body = "\n".join(f"- {m}" for m in matched)
+    return f"## Likely relevant to this ticket (keyword matches)\n{body}\n\n"
+
+
+def _fetch_graph_report(
+    target_repo: str, branch: str = "main", ticket_text: str = ""
+) -> str | None:
     """Fetch the stored Graphify GRAPH_REPORT.md for a repo, or None.
 
     Reads the knowledge graph built by the graphify-onboard / graphify-sync
     workflows from object storage. Best-effort: any failure (missing graph,
     no storage config, network error) returns None so the caller falls back
     to the AST map. Never raises.
+
+    Adds an "as of <sha>" header, a staleness warning when the stored graph
+    lags the live branch HEAD (skippable via GRAPH_STALENESS_CHECK=0), and an
+    optional ticket-keyword focus pointer.
     """
     try:
         from tools.graph_store import GraphStore
@@ -53,21 +101,34 @@ def _fetch_graph_report(target_repo: str, branch: str = "main") -> str | None:
 
         meta = store.get_repo_meta(target_repo)
         as_of = ""
+        freshness = ""
         if meta and meta.last_sha:
             as_of = f" (graph as of {meta.last_sha[:8]}, updated {meta.updated_at})"
+            if os.environ.get("GRAPH_STALENESS_CHECK", "1") != "0":
+                live = _live_head_sha(target_repo, branch)
+                if live and live != meta.last_sha:
+                    freshness = (
+                        f"\n⚠️ This graph may be stale: built at {meta.last_sha[:8]} "
+                        f"but {branch} is now at {live[:8]}. Treat structure near "
+                        "recently-changed files as approximate.\n"
+                    )
+
         header = (
             f"# Code Knowledge Graph — {target_repo}{as_of}\n"
             "Built with Graphify. Community Hubs are logical components; "
-            "God Nodes are highly-connected hotspots.\n\n"
+            "God Nodes are highly-connected hotspots.\n"
+            f"{freshness}\n"
         )
         print(f"Using Graphify graph for {target_repo}{as_of}", file=sys.stderr)
-        return header + report
+        return header + _focus_hint(report, ticket_text) + report
     except Exception as e:
         print(f"Graph fetch failed for {target_repo}: {e}", file=sys.stderr)
         return None
 
 
-def _generate_repo_map(target_repo: str, branch: str = "main", compact: bool = False) -> str:
+def _generate_repo_map(
+    target_repo: str, branch: str = "main", compact: bool = False, ticket_text: str = ""
+) -> str:
     """Return a structural understanding of the target repo for the prompt.
 
     Engine is selected by the ``REPO_MAP_ENGINE`` env var:
@@ -80,9 +141,11 @@ def _generate_repo_map(target_repo: str, branch: str = "main", compact: bool = F
         compact: If True, generates a minimal AST map with only top-level
                  class/function names (no methods/signatures/docstrings).
                  Ignored by the graphify engine (the report is already concise).
+        ticket_text: Optional summary/description used by the graphify engine
+                 to add a ticket-keyword focus pointer.
     """
     if os.environ.get("REPO_MAP_ENGINE", "ast").lower() == "graphify":
-        report = _fetch_graph_report(target_repo, branch)
+        report = _fetch_graph_report(target_repo, branch, ticket_text)
         if report:
             return report
         print("Falling back to AST repo map", file=sys.stderr)
@@ -169,7 +232,8 @@ async def run_refinement() -> None:
     )
 
     # Generate compact repo map for refinement (top-level only, ~4x smaller)
-    repo_map = _generate_repo_map(repo, branch, compact=True)
+    ticket_text = f"{os.environ.get('SUMMARY', '')}\n{os.environ.get('DESCRIPTION', '')}"
+    repo_map = _generate_repo_map(repo, branch, compact=True, ticket_text=ticket_text)
 
     context = AgentContext(
         issue_key=os.environ.get("ISSUE_KEY", ""),
@@ -224,7 +288,9 @@ async def run_implementation() -> None:
     )
 
     # Generate repo map (zero LLM cost)
-    repo_map = _generate_repo_map(repo, branch)
+    repo_map = _generate_repo_map(
+        repo, branch, ticket_text=f"{os.environ.get('SUMMARY', '')}\n{desc}"
+    )
 
     context = AgentContext(
         issue_key=os.environ.get("ISSUE_KEY", ""),
@@ -298,7 +364,8 @@ async def run_decomposition() -> None:
     # Decomposition cuts subtasks along the repo's structure. With the graphify
     # engine this map carries Community Hubs (component boundaries) and God Nodes
     # (shared hotspots) so the split follows real coupling, not guesses.
-    repo_map = _generate_repo_map(repo, branch)
+    ticket_text = f"{os.environ.get('SUMMARY', '')}\n{os.environ.get('DESCRIPTION', '')}"
+    repo_map = _generate_repo_map(repo, branch, ticket_text=ticket_text)
 
     context = AgentContext(
         issue_key=os.environ.get("ISSUE_KEY", ""),
