@@ -54,6 +54,7 @@ repo-map.json    → Jira project → GitHub repo routing config
 
 - **`repo-map.json`**: Maps Jira projects/components → GitHub repos. Supports per-route `llm_provider` and `llm_model` overrides.
 - **`LLM_PROVIDER` env var**: `cli` | `anthropic` | `openai` | `google` (optionally with model: `anthropic/claude-haiku-4-5-20251001`)
+- **`REPO_MAP_ENGINE` env var**: `ast` (default) | `graphify`. `graphify` injects the stored Graphify knowledge graph (built by the graphify-onboard/sync workflows) into the agent prompt, falling back to the AST map if no graph is available. See `docs/graphify-integration-plan.md`.
 - **`.mcp.json`**: MCP server config for Jira and GitHub tools
 
 ## Code Style

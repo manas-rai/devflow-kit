@@ -52,6 +52,12 @@ jobs:
           JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
           GH_PAT: ${{ secrets.GH_PAT }}
+          REPO_MAP_ENGINE: ${{ vars.REPO_MAP_ENGINE || 'ast' }}
+          GRAPH_STORE_BUCKET: ${{ secrets.GRAPH_STORE_BUCKET }}
+          GRAPH_STORE_ENDPOINT: ${{ secrets.GRAPH_STORE_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
           ISSUE_KEY: ${{ github.event.client_payload.issue_key }}
           PROJECT_KEY: ${{ github.event.client_payload.project_key }}
           COMPONENT: ${{ github.event.client_payload.component }}
