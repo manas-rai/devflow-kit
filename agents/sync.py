@@ -1,10 +1,19 @@
 """SyncAgent — keeps Jira in sync with GitHub PR lifecycle.
 
-This agent is deterministic — no Claude Code involved.
 It polls target repos for PR activity and updates Jira accordingly.
+It also tracks decomposed ticket completion: when all subtasks' PRs are
+merged, it transitions the parent ticket to Done.
 
-It also tracks decomposed ticket completion: when all subtasks' PRs
-are merged, it transitions the parent ticket to Done.
+Intentional design exception
+----------------------------
+Unlike the other agents, SyncAgent is NOT a declarative ``BaseAgent`` and
+does not invoke an LLM. PR-state reconciliation is a fully deterministic
+state machine driven by PR labels — there is no judgement for a model to
+make, so running one would only add cost, latency, and non-determinism.
+It therefore talks to the GitHub and Jira REST APIs directly and runs on a
+cron (see .github/workflows/sync.yml) rather than through a runner. Keep
+this distinction in mind: "agents are declarative" applies to the
+LLM-driven agents; this poller is the documented exception.
 """
 
 from __future__ import annotations

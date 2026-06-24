@@ -7,10 +7,8 @@ against the Acceptance Criteria defined in the `Spec`.
 
 from __future__ import annotations
 
-import os
 import sys
 
-from devflow_core.models import Spec, VerificationResult
 from framework.base_agent import AgentContext, BaseAgent
 from framework.guardrail import NoErrorsInOutput
 
@@ -35,8 +33,13 @@ class VerificationAgent(BaseAgent):
         print(f"🔍 Starting Verification & Validation for {context.issue_key}...", file=sys.stderr)
 
     async def on_success(self, context: AgentContext, execution_log: str) -> None:
-        """Parse the structured VerificationResult output by Claude and post to GitHub PR."""
-        # TODO: Post the result back to the PR as a review using github_client
+        """Log completion.
+
+        Posting the verification verdict back to the PR is the agent's own
+        responsibility during the agentic loop (via `post_github_comment`,
+        per prompts/verify.md) — keeping this hook a pure lifecycle log honors
+        the declarative principle: Claude takes the actions, not the framework.
+        """
         print(f"✅ V&V completed successfully for {context.issue_key}.", file=sys.stderr)
 
     async def on_failure(self, context: AgentContext, error: str) -> None:

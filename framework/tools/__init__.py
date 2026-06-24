@@ -94,8 +94,8 @@ _GITHUB_READ_TOOLS: list[ToolDef] = [
 
 _GITHUB_WRITE_TOOLS: list[ToolDef] = [
     ToolDef(
-        name="create_github_issue",
-        description="Create a GitHub issue and return its URL.",
+        name="create_technical_issue",
+        description="Create a GitHub issue with a technical spec and return its URL.",
         parameters={
             "type": "object",
             "properties": {
@@ -112,7 +112,7 @@ _GITHUB_WRITE_TOOLS: list[ToolDef] = [
         },
     ),
     ToolDef(
-        name="update_github_issue",
+        name="update_technical_issue",
         description="Update the title or body of an existing GitHub issue.",
         parameters={
             "type": "object",
@@ -311,8 +311,8 @@ async def execute_tool(tool_name: str, tool_input: dict, context: Any) -> str:
     )
     from framework.tools.github_tools import (
         search_code,
-        create_github_issue,
-        update_github_issue,
+        create_technical_issue,
+        update_technical_issue,
         post_github_comment,
         create_branch,
         create_pull_request,
@@ -338,8 +338,8 @@ async def execute_tool(tool_name: str, tool_input: dict, context: Any) -> str:
         "transition_jira_ticket": lambda i: transition_jira_ticket(**i),
         # GitHub
         "search_code": lambda i: search_code(**i),
-        "create_github_issue": lambda i: create_github_issue(**i),
-        "update_github_issue": lambda i: update_github_issue(**i),
+        "create_technical_issue": lambda i: create_technical_issue(**i),
+        "update_technical_issue": lambda i: update_technical_issue(**i),
         "post_github_comment": lambda i: post_github_comment(**i),
         "create_branch": lambda i: create_branch(**i),
         "create_pull_request": lambda i: create_pull_request(**i),

@@ -832,7 +832,7 @@ GITHUB_SEARCH = ToolDef(
 )
 
 GITHUB_CREATE_ISSUE = ToolDef(
-    name="create_github_issue",
+    name="create_technical_issue",
     description="Create a GitHub issue with a technical spec.",
     params=[
         ToolParam("repo", "string", "GitHub repo in owner/name format"),

@@ -162,24 +162,28 @@ The Sync Agent tracks progress and transitions the parent ticket when all subtas
 devflow-kit/
 ├── .github/workflows/
 │   ├── refine.yml              ← Refinement Agent workflow
+│   ├── implement.yml           ← Implementation Agent workflow
 │   ├── sync.yml                ← Sync Agent (polls PRs every 15min)
-│   └── dependency-chain.yml    ← Sequential subtask dispatch
-├── agents/
-│   ├── refine.py               ← Refinement Agent logic
-│   ├── sync.py                 ← Sync Agent logic
-│   ├── sync_poll.py            ← PR polling for sync
-│   ├── dependency_chain.py     ← Sequential dependency handler
-│   └── utils/
-│       ├── config.py           ← Config + repo routing
-│       ├── jira.py             ← Jira API client
-│       ├── github.py           ← GitHub API client
-│       └── claude.py           ← Claude Code CLI wrapper
-├── prompts/
-│   ├── refine.md               ← Refinement prompt template
-│   └── issue-body.md           ← GitHub issue template
-├── schemas/
-│   └── refinement-output.json  ← Output validation schema
+│   └── pages.yml               ← Publishes the public site
+├── agents/                     ← Declarative agent definitions
+│   ├── refinement.py
+│   ├── decomposition.py
+│   ├── implementation.py
+│   ├── verification.py
+│   └── sync.py                 ← Deterministic PR-state poller (no LLM)
+├── framework/                  ← Core: BaseAgent, runners, providers, tools, guardrails
+│   ├── base_agent.py
+│   ├── runner.py               ← AgentRunner (Claude CLI)
+│   ├── sdk_runner.py           ← SDKRunner (direct API)
+│   ├── guardrail.py
+│   ├── providers/              ← LLM abstraction (Anthropic, OpenAI, Google)
+│   └── tools/                  ← SDK tool definitions + execution
+├── mcp_server/                 ← MCP servers for Jira + GitHub
+├── core/models.py              ← Domain models (WorkItem, Spec, Task, …)
+├── prompts/                    ← Agent system prompt templates (.md)
+├── tools/                      ← repo_map / resolve_repo helpers
 ├── repo-map.json               ← Route config (edit this)
+├── run_agent.py                ← CLI entry point for all agents
 ├── pyproject.toml
 └── tests/
 ```

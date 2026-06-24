@@ -173,20 +173,11 @@ class MaxSubtasks(Guardrail):
         self.max_count = max_count
 
     def check(self, execution_log: str, context: dict) -> GuardrailResult:
-        # Count both MCP and legacy Bash subtask creation calls
-        count = 0
-        for indicator in [
-            "mcp__jira__create_issue",
-            "create_subtask",
-            "tools/create_jira_subtask.py",
-        ]:
-            count += execution_log.count(indicator)
-        # Avoid double-counting — take the max of individual indicators
-        count = max(
-            execution_log.count("mcp__jira__create_issue"),
-            execution_log.count("tools/create_jira_subtask.py"),
-            0,
-        )
+        # Decomposition creates one GitHub issue per subtask via
+        # `create_technical_issue`. The MCP tool
+        # (`mcp__devflow-github__create_technical_issue`) and the SDK tool
+        # share that name, so a single substring count covers both runners.
+        count = execution_log.count("create_technical_issue")
         if count <= self.max_count:
             return GuardrailResult(passed=True)
         return GuardrailResult(

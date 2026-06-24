@@ -1,5 +1,6 @@
 """Tests for DevFlow Kit tools."""
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -23,23 +24,24 @@ class TestResolveRepo:
         """CWH project resolves to cloud-waste-hunter."""
         result = run_resolve("CWH", "backend")
         assert result.returncode == 0
-        parts = result.stdout.strip().split()
-        assert "cloud-waste-hunter" in parts[0]
+        data = json.loads(result.stdout)
+        assert "cloud-waste-hunter" in data["github_repo"]
 
     def test_default_fallback(self):
         """Unknown project falls back to default repo."""
         result = run_resolve("UNKNOWN", "x")
         assert result.returncode == 0
-        parts = result.stdout.strip().split()
-        assert len(parts) >= 2  # Should return "repo branch"
+        data = json.loads(result.stdout)
+        assert data["github_repo"]
+        assert data["branch"]
 
     def test_output_format(self):
-        """Output should be 'owner/repo branch'."""
+        """Output should be JSON with github_repo and branch keys."""
         result = run_resolve("CWH", "")
         assert result.returncode == 0
-        parts = result.stdout.strip().split()
-        assert len(parts) == 2
-        assert "/" in parts[0]  # owner/repo format
+        data = json.loads(result.stdout)
+        assert "/" in data["github_repo"]  # owner/repo format
+        assert "branch" in data
 
 
 class TestBuildPrompt:

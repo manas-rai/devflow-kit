@@ -4,16 +4,28 @@ from __future__ import annotations
 
 import os
 
-from google import genai
-from google.genai import types
-
 from framework.providers.base import LLMProvider, LLMResponse, ToolDef
+
+try:
+    from google import genai
+    from google.genai import types
+except ImportError as exc:  # pragma: no cover - optional dependency
+    genai = None
+    types = None
+    _IMPORT_ERROR: ImportError | None = exc
+else:
+    _IMPORT_ERROR = None
 
 
 class GoogleProvider(LLMProvider):
     """Google Gemini provider."""
 
     def __init__(self, model: str = "gemini-2.5-flash"):
+        if genai is None:
+            raise ImportError(
+                "The 'google-genai' package is required for GoogleProvider. "
+                "Install it with: pip install 'devflow-kit[google]' or pip install google-genai"
+            ) from _IMPORT_ERROR
         api_key = os.environ.get("GEMINI_API_KEY", "")
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable is missing")
