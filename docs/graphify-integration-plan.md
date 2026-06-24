@@ -84,6 +84,8 @@ New secrets / env:
 | `GRAPH_STORE_PREFIX` | Optional — key prefix (default `graphs`) |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` | Bucket credentials (read by boto3) |
 | `GRAPHIFY_CMD` | Optional — override the `graphify` invocation |
+| `GRAPHIFY_MAX_FILES` | Optional — skip onboarding/update if a repo exceeds this file count (0 = unlimited) |
+| `GRAPH_STALENESS_CHECK` | Optional — set `0` to skip the live HEAD-vs-graph staleness check at consume time |
 
 Reuses the existing model API key (multimodal semantic step) and `GH_PAT` (clone
 private target repos). Per-route opt-out: set `"graph": false` on a `repo-map.json` route.
@@ -95,7 +97,7 @@ private target repos). Per-route opt-out: set `"graph": false` on a `repo-map.js
 3. **Incremental sync** — `graphify-sync.yml`, cache restore/save, per-repo concurrency.
 4. **Consumption** — `_generate_repo_map` graphify engine behind `REPO_MAP_ENGINE`, AST fallback.
 5. **Decomposition communities** — parallel-subtask boundaries from clusters.
-6. **Hardening** — ticket-scoped subgraph extraction, staleness banner, token-budget guard, feature-branch indexing.
+6. **Hardening** — done: live staleness banner (`GRAPH_STALENESS_CHECK`), onboarding cost guard (`GRAPHIFY_MAX_FILES`) + token-cost logging, and an additive ticket-keyword focus pointer. **Deferred:** feature-branch indexing (indexing PR head branches is a larger feature — default-branch indexing covers merges/pushes today).
 
 ## Risks & mitigations
 

@@ -33,6 +33,22 @@ class GraphifyResult:
     stdout: str
 
 
+def count_source_files(repo_path: Path) -> int:
+    """Count non-skipped files in a repo — a proxy for Graphify's workload.
+
+    Reuses repo_map's skip rules (node_modules, lockfiles, binaries, etc.) so
+    the count reflects roughly what Graphify will process, for cost guarding.
+    """
+    from tools.repo_map import should_skip
+
+    repo_path = Path(repo_path)
+    count = 0
+    for f in repo_path.rglob("*"):
+        if f.is_file() and not should_skip(f.relative_to(repo_path)):
+            count += 1
+    return count
+
+
 def run_graphify(
     repo_path: Path,
     restore_cache_from: Path | None = None,

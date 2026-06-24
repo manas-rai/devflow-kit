@@ -24,7 +24,7 @@ import httpx
 sys.path.append(str(Path(__file__).parent.parent))
 
 from tools.graph_store import GraphStore  # noqa: E402
-from tools.graphify_engine import run_graphify  # noqa: E402
+from tools.graphify_engine import count_source_files, run_graphify  # noqa: E402
 from tools.repo_map import clone_repo  # noqa: E402
 
 REPO_MAP_PATH = Path(__file__).parent.parent / "repo-map.json"
@@ -75,6 +75,17 @@ def _build_and_upload(repo: str, branch: str, *, incremental: bool) -> None:
     clone_path = clone_repo(repo, branch)
     cache_restore: Path | None = None
     try:
+        max_files = int(os.environ.get("GRAPHIFY_MAX_FILES", "0") or "0")
+        if max_files > 0:
+            n_files = count_source_files(clone_path)
+            if n_files > max_files:
+                print(
+                    f"⏭️  Skipping {repo}: {n_files} files exceeds "
+                    f"GRAPHIFY_MAX_FILES={max_files}",
+                    file=sys.stderr,
+                )
+                return
+
         if incremental:
             cache_restore = Path(tempfile.mkdtemp(prefix="graphify-cache-"))
             if not store.download_cache(repo, cache_restore):
@@ -83,6 +94,10 @@ def _build_and_upload(repo: str, branch: str, *, incremental: bool) -> None:
                 cache_restore = None
 
         result = run_graphify(clone_path, restore_cache_from=cache_restore)
+        # Graphify reports token costs on completion — surface the tail for visibility.
+        tail = "\n".join(result.stdout.strip().splitlines()[-5:])
+        if tail:
+            print(f"graphify output tail:\n{tail}", file=sys.stderr)
         sha = github_head_sha(repo, branch) or ""
         store.upload_graph(
             repo,
