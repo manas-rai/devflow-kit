@@ -1,0 +1,79 @@
+name: "DevFlow: Graphify Sync"
+
+# Polls each tracked target repo's default-branch HEAD SHA and incrementally
+# updates its Graphify graph whenever the branch has moved (PR merge or push).
+# Nothing is installed in target repos — detection is pull-based.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.disc.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: uv python install 3.12
+
+      - run: uv sync --extra storage
+
+      - id: disc
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          GRAPH_STORE_BUCKET: ${{ secrets.GRAPH_STORE_BUCKET }}
+          GRAPH_STORE_ENDPOINT: ${{ secrets.GRAPH_STORE_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          matrix=$(uv run python -m tools.graphify_cli discover --mode sync)
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "Changed repos: $matrix"
+
+  update:
+    needs: discover
+    if: ${{ fromJson(needs.discover.outputs.matrix).include[0] != null }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    concurrency:
+      # Shared with graphify-onboard so an onboard and a sync update for the
+      # same repo never run at once.
+      group: graphify-${{ matrix.repo }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: uv python install 3.12
+
+      - run: uv sync --extra storage --extra graphify
+
+      - name: "Update graph · ${{ matrix.repo }}"
+        env:
+          PYTHONUNBUFFERED: "1"
+          LLM_MODEL: ${{ vars.GRAPHIFY_MODEL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          GRAPH_STORE_BUCKET: ${{ secrets.GRAPH_STORE_BUCKET }}
+          GRAPH_STORE_ENDPOINT: ${{ secrets.GRAPH_STORE_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: uv run python -m tools.graphify_cli update --repo "${{ matrix.repo }}" --branch "${{ matrix.branch }}"
