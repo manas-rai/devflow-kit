@@ -34,17 +34,59 @@ def _get_runner(agent):
         return SDKRunner(provider=provider, model=model)
 
 
-def _generate_repo_map(target_repo: str, branch: str = "main", compact: bool = False) -> str:
-    """Generate a structural repo map (zero LLM cost).
+def _fetch_graph_report(target_repo: str, branch: str = "main") -> str | None:
+    """Fetch the stored Graphify GRAPH_REPORT.md for a repo, or None.
 
-    Uses AST parsing to extract class/function signatures from the target
-    repo. Returns a concise text map that gives the LLM a complete structural
-    understanding of the codebase in ~2K tokens instead of ~150K.
+    Reads the knowledge graph built by the graphify-onboard / graphify-sync
+    workflows from object storage. Best-effort: any failure (missing graph,
+    no storage config, network error) returns None so the caller falls back
+    to the AST map. Never raises.
+    """
+    try:
+        from tools.graph_store import GraphStore
+
+        store = GraphStore()
+        report = store.read_report(target_repo)
+        if not report:
+            print(f"No stored graph for {target_repo}", file=sys.stderr)
+            return None
+
+        meta = store.get_repo_meta(target_repo)
+        as_of = ""
+        if meta and meta.last_sha:
+            as_of = f" (graph as of {meta.last_sha[:8]}, updated {meta.updated_at})"
+        header = (
+            f"# Code Knowledge Graph — {target_repo}{as_of}\n"
+            "Built with Graphify. Community Hubs are logical components; "
+            "God Nodes are highly-connected hotspots.\n\n"
+        )
+        print(f"Using Graphify graph for {target_repo}{as_of}", file=sys.stderr)
+        return header + report
+    except Exception as e:
+        print(f"Graph fetch failed for {target_repo}: {e}", file=sys.stderr)
+        return None
+
+
+def _generate_repo_map(target_repo: str, branch: str = "main", compact: bool = False) -> str:
+    """Return a structural understanding of the target repo for the prompt.
+
+    Engine is selected by the ``REPO_MAP_ENGINE`` env var:
+      - ``graphify`` → the stored Graphify knowledge graph (rich, multi-language),
+        falling back to the AST map if no graph is available.
+      - ``ast`` (default) → AST parsing to extract class/function signatures,
+        giving a complete structural map in ~2K tokens instead of ~150K.
 
     Args:
-        compact: If True, generates a minimal map with only top-level
+        compact: If True, generates a minimal AST map with only top-level
                  class/function names (no methods/signatures/docstrings).
+                 Ignored by the graphify engine (the report is already concise).
     """
+    if os.environ.get("REPO_MAP_ENGINE", "ast").lower() == "graphify":
+        report = _fetch_graph_report(target_repo, branch)
+        if report:
+            return report
+        print("Falling back to AST repo map", file=sys.stderr)
+
     import subprocess as _sp
 
     try:
