@@ -295,6 +295,11 @@ async def run_decomposition() -> None:
 
     repo, branch = resolve_target_repo()
 
+    # Decomposition cuts subtasks along the repo's structure. With the graphify
+    # engine this map carries Community Hubs (component boundaries) and God Nodes
+    # (shared hotspots) so the split follows real coupling, not guesses.
+    repo_map = _generate_repo_map(repo, branch)
+
     context = AgentContext(
         issue_key=os.environ.get("ISSUE_KEY", ""),
         project_key=os.environ.get("PROJECT_KEY", ""),
@@ -306,6 +311,7 @@ async def run_decomposition() -> None:
         target_branch=branch,
         extra={
             "event_type": os.environ.get("EVENT_TYPE", "devflow-decompose"),
+            "repo_map": repo_map,
         },
     )
 

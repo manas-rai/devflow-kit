@@ -1,7 +1,8 @@
 """Tests for BaseAgent and concrete agent definitions."""
 
-from agents.refinement import RefinementAgent
+from agents.decomposition import DecompositionAgent
 from agents.implementation import ImplementationAgent
+from agents.refinement import RefinementAgent
 from framework.base_agent import AgentContext, BaseAgent
 from framework.tool import resolve_repo
 
@@ -141,3 +142,29 @@ class TestImplementationAgent:
         prompt = agent.build_prompt(ctx)
         assert "X-1" in prompt
         assert "implementation" in prompt.lower()
+
+
+class TestDecompositionAgent:
+    def _ctx(self, repo_map: str) -> AgentContext:
+        return AgentContext(
+            issue_key="EPIC-1",
+            target_repo="org/api",
+            summary="Big epic",
+            description="Refined spec",
+            jira_base_url="https://x.atlassian.net",
+            extra={"repo_map": repo_map},
+        )
+
+    def test_prompt_renders_graph(self):
+        """The knowledge graph is injected via {{repo_map}}."""
+        prompt = DecompositionAgent().build_prompt(self._ctx("COMMUNITY-HUBS-MARKER"))
+        assert "COMMUNITY-HUBS-MARKER" in prompt
+
+    def test_prompt_has_community_boundary_guidance(self):
+        prompt = DecompositionAgent().build_prompt(self._ctx("graph"))
+        assert "Community Hubs" in prompt
+        assert "God Node" in prompt
+
+    def test_creates_github_issue_guardrail(self):
+        names = [g.name for g in DecompositionAgent().guardrails]
+        assert "must_create_github_issue" in names
